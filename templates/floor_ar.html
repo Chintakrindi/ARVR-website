@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js";
+import { ARButton } from "https://cdn.jsdelivr.net/npm/three/examples/jsm/webxr/ARButton.js";
+
+let camera, scene, renderer, reticle;
+
+init();
+
+function init(){
+scene=new THREE.Scene();
+camera=new THREE.PerspectiveCamera();
+
+renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.xr.enabled=true;
+document.body.appendChild(renderer.domElement);
+
+document.body.appendChild(
+ARButton.createButton(renderer,{requiredFeatures:["hit-test"]})
+);
+
+const light=new THREE.HemisphereLight(0xffffff,0xbbbbff,1);
+scene.add(light);
+
+/* reticle */
+reticle=new THREE.Mesh(
+new THREE.RingGeometry(0.15,0.2,32).rotateX(-Math.PI/2),
+new THREE.MeshBasicMaterial({color:0x00ffff})
+);
+reticle.matrixAutoUpdate=false;
+reticle.visible=false;
+scene.add(reticle);
+
+renderer.setAnimationLoop(render);
+}
+
+function render(timestamp,frame){
+renderer.render(scene,camera);
+}
+</script>
+</head>
+<body style="margin:0"></body>
+</html>
