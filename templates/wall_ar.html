@@ -4,15 +4,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wall AR Studio</title>
 
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
 <style>
+
 body{
 margin:0;
 overflow:hidden;
+font-family:Segoe UI;
 background:black;
-font-family:Arial;
 }
 
 /* CAMERA */
+
 video{
 position:fixed;
 top:0;
@@ -23,25 +27,96 @@ object-fit:cover;
 z-index:0;
 }
 
-/* AR PLATE */
+/* HEADER */
+
+.title{
+position:fixed;
+top:20px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,.6);
+color:white;
+padding:10px 24px;
+border-radius:30px;
+backdrop-filter:blur(12px);
+z-index:20;
+}
+
+/* TOOLBAR */
+
+.toolbar{
+position:fixed;
+bottom:90px;
+left:50%;
+transform:translateX(-50%);
+display:flex;
+align-items:center;
+gap:14px;
+background:rgba(20,20,20,.7);
+padding:12px 22px;
+border-radius:50px;
+backdrop-filter:blur(14px);
+z-index:20;
+}
+
+/* COLOR BOX */
+
+.colorPreview{
+width:36px;
+height:36px;
+border-radius:8px;
+border:2px solid white;
+cursor:pointer;
+}
+
+/* BUTTON */
+
+.toolBtn{
+background:#06b6d4;
+border:none;
+padding:10px 18px;
+border-radius:20px;
+color:white;
+cursor:pointer;
+}
+
+/* CAPTURE */
+
+.captureBtn{
+position:fixed;
+bottom:30px;
+left:50%;
+transform:translateX(-50%);
+background:#0072ff;
+border:none;
+padding:16px 60px;
+border-radius:40px;
+color:white;
+font-size:18px;
+cursor:pointer;
+z-index:20;
+}
+
+/* WALL PLATE */
+
 .arPlate{
 position:fixed;
-top:40%;
-left:40%;
 width:260px;
 height:180px;
-z-index:5;
+border-radius:16px;
 cursor:grab;
-border-radius:12px;
-box-shadow:0 20px 50px rgba(0,0,0,.7);
+box-shadow:0 20px 60px rgba(0,0,0,.8);
+opacity:.8;
 }
 
 /* ACTIVE */
+
 .arPlate.active{
 outline:2px solid #00e5ff;
 }
 
 /* DELETE */
+
 .deleteBtn{
 position:absolute;
 top:-12px;
@@ -57,207 +132,263 @@ justify-content:center;
 opacity:0;
 pointer-events:none;
 }
+
 .arPlate.active .deleteBtn{
 opacity:1;
 pointer-events:auto;
 }
 
 /* RESIZE HANDLES */
+
 .handle{
 position:absolute;
-background:#00e5ff;
-border-radius:50%;
 width:14px;
 height:14px;
+background:#00e5ff;
+border-radius:50%;
 opacity:0;
-pointer-events:none;
-}
-.arPlate.active .handle{
-opacity:1;
-pointer-events:auto;
 }
 
-/* Corners */
+.arPlate.active .handle{
+opacity:1;
+}
+
 .tl{top:-7px;left:-7px;cursor:nwse-resize;}
 .tr{top:-7px;right:-7px;cursor:nesw-resize;}
 .bl{bottom:-7px;left:-7px;cursor:nesw-resize;}
 .br{bottom:-7px;right:-7px;cursor:nwse-resize;}
 
-/* Edges */
-.tm{top:-7px;left:50%;transform:translateX(-50%);cursor:ns-resize;}
-.bm{bottom:-7px;left:50%;transform:translateX(-50%);cursor:ns-resize;}
-.ml{left:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize;}
-.mr{right:-7px;top:50%;transform:translateY(-50%);cursor:ew-resize;}
-
-/* PANEL */
-.panel{
-position:fixed;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
-display:flex;
-gap:10px;
-background:rgba(20,20,20,.6);
-padding:10px 20px;
-border-radius:50px;
-color:white;
-z-index:20;
-backdrop-filter:blur(14px);
-}
-
-button{
-background:#00bcd4;
-border:none;
-padding:8px 16px;
-border-radius:20px;
-color:white;
-cursor:pointer;
-}
 </style>
 </head>
 
 <body>
 
-<div class="panel">
-🎨 Wall AR
-<input type="color" id="colorPick">
-<button onclick="addColor()">Add</button>
-<input type="file" id="texUpload">
-<button onclick="addTexture()">Texture</button>
+<div class="title">🎨 Wall AR Studio</div>
+
+<div class="toolbar">
+
+<input type="color" id="colorPick" value="#00bcd4" style="display:none">
+
+<div class="colorPreview" id="colorBox"></div>
+
+<button class="toolBtn" onclick="addColor()">Add Paint</button>
+
 </div>
+
+<button class="captureBtn" onclick="capture()">📸 Capture</button>
 
 <script>
 
 /* CAMERA */
+
 async function startCamera(){
+
 const stream=await navigator.mediaDevices.getUserMedia({
 video:{facingMode:{ideal:"environment"}}
-});
-let v=document.createElement("video");
-v.srcObject=stream;
-v.autoplay=true;
-v.playsInline=true;
-document.body.prepend(v);
+})
+
+let v=document.createElement("video")
+v.srcObject=stream
+v.autoplay=true
+v.playsInline=true
+
+document.body.prepend(v)
+
 }
-window.onload=startCamera;
+
+window.onload=startCamera
+
+
+/* COLOR UI */
+
+let colorPick=document.getElementById("colorPick")
+let colorBox=document.getElementById("colorBox")
+
+colorBox.style.background=colorPick.value
+
+colorBox.onclick=()=>colorPick.click()
+
+colorPick.oninput=()=>{
+colorBox.style.background=colorPick.value
+}
 
 
 /* CREATE PLATE */
+
 function createPlate(){
 
-let div=document.createElement("div");
-div.className="arPlate";
+let div=document.createElement("div")
+div.className="arPlate"
+div.style.top="40%"
+div.style.left="40%"
 
-/* Activate */
+/* activate */
+
 div.onclick=e=>{
-e.stopPropagation();
+e.stopPropagation()
+
 document.querySelectorAll(".arPlate")
-.forEach(p=>p.classList.remove("active"));
-div.classList.add("active");
-};
+.forEach(p=>p.classList.remove("active"))
 
-/* Delete */
-let del=document.createElement("div");
-del.className="deleteBtn";
-del.innerHTML="✖";
-del.onclick=()=>div.remove();
-div.appendChild(del);
-
-/* Handles */
-["tl","tr","bl","br","tm","bm","ml","mr"].forEach(c=>{
-let h=document.createElement("div");
-h.className="handle "+c;
-div.appendChild(h);
-resize(div,h,c);
-});
-
-drag(div);
-
-document.body.appendChild(div);
-return div;
+div.classList.add("active")
 }
 
-/* CLICK OUTSIDE */
-document.body.onclick=()=>{
-document.querySelectorAll(".arPlate")
-.forEach(p=>p.classList.remove("active"));
-};
+/* delete */
+
+let del=document.createElement("div")
+del.className="deleteBtn"
+del.innerHTML="✖"
+del.onclick=()=>div.remove()
+
+div.appendChild(del)
+
+/* resize handles */
+
+["tl","tr","bl","br"].forEach(c=>{
+let h=document.createElement("div")
+h.className="handle "+c
+div.appendChild(h)
+resize(div,h,c)
+})
+
+drag(div)
+
+document.body.appendChild(div)
+
+return div
+
+}
 
 
-/* COLOR */
+/* ADD COLOR */
+
 function addColor(){
-let p=createPlate();
-p.style.background=document.getElementById("colorPick").value;
-}
 
-/* TEXTURE */
-function addTexture(){
-let file=document.getElementById("texUpload").files[0];
-if(!file) return;
-let p=createPlate();
-p.style.background=`url(${URL.createObjectURL(file)}) center/cover`;
+let p=createPlate()
+
+p.style.background=colorPick.value
+p.style.opacity=".8"
+
 }
 
 
 /* DRAG */
+
 function drag(el){
 
-let offsetX,offsetY;
+let offsetX,offsetY
 
 el.onmousedown=e=>{
-offsetX=e.clientX-el.offsetLeft;
-offsetY=e.clientY-el.offsetTop;
+
+offsetX=e.clientX-el.offsetLeft
+offsetY=e.clientY-el.offsetTop
 
 document.onmousemove=e=>{
-el.style.left=e.clientX-offsetX+"px";
-el.style.top=e.clientY-offsetY+"px";
-};
+el.style.left=e.clientX-offsetX+"px"
+el.style.top=e.clientY-offsetY+"px"
+}
 
 document.onmouseup=()=>{
-document.onmousemove=null;
-};
-};
+document.onmousemove=null
+}
+
+}
+
 }
 
 
 /* RESIZE */
+
 function resize(el,h,type){
 
 h.onmousedown=e=>{
-e.stopPropagation();
 
-let startX=e.clientX;
-let startY=e.clientY;
+e.stopPropagation()
 
-let startW=el.offsetWidth;
-let startH=el.offsetHeight;
-let startL=el.offsetLeft;
-let startT=el.offsetTop;
+let startX=e.clientX
+let startY=e.clientY
+
+let startW=el.offsetWidth
+let startH=el.offsetHeight
 
 document.onmousemove=e=>{
 
-let dx=e.clientX-startX;
-let dy=e.clientY-startY;
+let dx=e.clientX-startX
+let dy=e.clientY-startY
 
-if(type.includes("r")) el.style.width=startW+dx+"px";
-if(type.includes("l")){
-el.style.width=startW-dx+"px";
-el.style.left=startL+dx+"px";
+if(type==="br"){
+el.style.width=startW+dx+"px"
+el.style.height=startH+dy+"px"
 }
 
-if(type.includes("b")) el.style.height=startH+dy+"px";
-if(type.includes("t")){
-el.style.height=startH-dy+"px";
-el.style.top=startT+dy+"px";
+if(type==="bl"){
+el.style.width=startW-dx+"px"
+el.style.height=startH+dy+"px"
 }
-};
+
+if(type==="tr"){
+el.style.width=startW+dx+"px"
+el.style.height=startH-dy+"px"
+}
+
+if(type==="tl"){
+el.style.width=startW-dx+"px"
+el.style.height=startH-dy+"px"
+}
+
+}
 
 document.onmouseup=()=>{
-document.onmousemove=null;
-};
-};
+document.onmousemove=null
+}
+
+}
+
+}
+
+
+/* CAPTURE */
+
+async function capture(){
+
+const canvas=document.createElement("canvas")
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+
+const ctx=canvas.getContext("2d")
+
+let video=document.querySelector("video")
+
+ctx.drawImage(video,0,0,canvas.width,canvas.height)
+
+let plates=document.querySelectorAll(".arPlate")
+
+for(let plate of plates){
+
+let rect=plate.getBoundingClientRect()
+
+let plateCanvas=await html2canvas(plate)
+
+ctx.drawImage(
+plateCanvas,
+rect.left,
+rect.top,
+rect.width,
+rect.height
+)
+
+}
+
+const link=document.createElement("a")
+
+link.download="wall_ar_capture.png"
+link.href=canvas.toDataURL()
+
+link.click()
+
 }
 
 </script>
+
 </body>
 </html>

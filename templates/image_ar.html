@@ -9,7 +9,7 @@
 
 <style>
 
-/* ===== GLOBAL ===== */
+/* GLOBAL */
 
 html,body{
 margin:0;
@@ -20,7 +20,7 @@ font-family:Segoe UI;
 height:100%;
 }
 
-/* ===== CAMERA ===== */
+/* CAMERA */
 
 video{
 position:fixed;
@@ -32,7 +32,18 @@ object-fit:cover;
 z-index:1;
 }
 
-/* ===== AR UI MESSAGE ===== */
+/* CLICK LAYER */
+
+#arLayer{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+z-index:5;
+}
+
+/* UI MESSAGE */
 
 .arUI{
 position:fixed;
@@ -41,37 +52,63 @@ left:50%;
 transform:translateX(-50%);
 background:rgba(0,0,0,.6);
 color:white;
-padding:12px 24px;
+padding:10px 20px;
 border-radius:30px;
 font-size:14px;
 z-index:2000;
 backdrop-filter:blur(10px);
 }
 
-/* ===== AR IMAGE ===== */
+/* BACK BUTTON */
 
-.arImage{
+.back{
 position:fixed;
-top:50%;
-left:50%;
-width:320px;
-border-radius:24px;
-cursor:grab;
-z-index:10;
-
-box-shadow:
-0 40px 120px rgba(0,0,0,.6);
-
-transition:transform .25s cubic-bezier(.25,.8,.25,1);
+top:20px;
+left:20px;
+background:rgba(0,0,0,.6);
+padding:10px 18px;
+border-radius:30px;
+color:white;
+text-decoration:none;
+z-index:2000;
 }
 
-.arImage img{
+/* AR OBJECT */
+
+.arObject{
+position:fixed;
+width:260px;
+border-radius:20px;
+z-index:10;
+transform:translate(-50%,-50%);
+transition:transform .15s;
+cursor:grab;
+}
+
+.arObject img{
 width:100%;
-border-radius:24px;
+border-radius:20px;
 pointer-events:none;
 }
 
-/* ===== CAPTURE BUTTON ===== */
+/* FLOOR SHADOW */
+
+.shadow{
+position:absolute;
+bottom:-18px;
+left:50%;
+width:75%;
+height:22px;
+background:radial-gradient(
+ellipse at center,
+rgba(0,0,0,.5),
+transparent
+);
+transform:translateX(-50%);
+filter:blur(7px);
+}
+
+/* CAPTURE BUTTON */
 
 .captureBtn{
 position:fixed;
@@ -80,7 +117,7 @@ left:50%;
 transform:translateX(-50%);
 background:#0072ff;
 border:none;
-padding:15px 50px;
+padding:16px 60px;
 border-radius:50px;
 color:white;
 font-size:18px;
@@ -97,154 +134,167 @@ background:#005be0;
 
 <body>
 
+<a href="/" class="back">← Back</a>
+
 <!-- CAMERA -->
 <video id="cam" autoplay playsinline muted></video>
 
-<!-- UI MESSAGE -->
+<!-- CLICK AREA -->
+<div id="arLayer"></div>
+
 <div class="arUI">
-Drag and zoom the image to preview
+Tap anywhere to place • Drag to move • Scroll / Pinch to zoom
 </div>
 
-<!-- AR IMAGE -->
-<div class="arImage" id="plate">
+<!-- AR OBJECT -->
+
+<div class="arObject" id="object">
+
 <img src="{{ project.file_url }}" crossorigin="anonymous">
+
+<div class="shadow"></div>
+
 </div>
 
-<!-- CAPTURE -->
+<!-- CAPTURE BUTTON -->
+
 <button class="captureBtn" id="captureBtn">
 📸 Capture
 </button>
 
 <script>
 
-/* ===== CAMERA ===== */
+/* CAMERA */
 
-const cam=document.getElementById("cam");
+const cam=document.getElementById("cam")
 
 navigator.mediaDevices.getUserMedia({
 video:{facingMode:"environment"}
 })
 .then(stream=>{
-cam.srcObject=stream;
+cam.srcObject=stream
 })
 .catch(()=>{
-alert("Camera requires HTTPS.");
-});
+alert("Camera requires HTTPS or localhost")
+})
 
+/* AR VARIABLES */
 
-/* ===== AR VARIABLES ===== */
+let object=document.getElementById("object")
 
-let plate=document.getElementById("plate");
+let x=window.innerWidth/2
+let y=window.innerHeight/2
+let scale=1
 
-let x=0;
-let y=0;
-let scale=1;
-
-let startX=0;
-let startY=0;
-
-
-/* ===== UPDATE ===== */
+/* UPDATE POSITION */
 
 function update(){
 
-plate.style.transform=
-`translate(-50%,-50%)
- translate(${x}px,${y}px)
- scale(${scale})`;
+object.style.transform=
+`translate(${x}px,${y}px) translate(-50%,-50%) scale(${scale}) rotateX(10deg)`
 
 }
 
+/* TAP TO PLACE OBJECT */
 
-/* ===== DRAG (MOUSE) ===== */
+document.getElementById("arLayer").addEventListener("click",e=>{
 
-plate.addEventListener("mousedown",e=>{
+x=e.clientX
+y=e.clientY
 
-startX=e.clientX-x;
-startY=e.clientY-y;
+update()
+
+})
+
+/* DRAG OBJECT */
+
+let startX,startY
+
+object.addEventListener("mousedown",e=>{
+
+startX=e.clientX-x
+startY=e.clientY-y
 
 function move(e){
 
-x=e.clientX-startX;
-y=e.clientY-startY;
+x=e.clientX-startX
+y=e.clientY-startY
 
-update();
+update()
 
 }
 
 function stop(){
 
-document.removeEventListener("mousemove",move);
-document.removeEventListener("mouseup",stop);
+document.removeEventListener("mousemove",move)
+document.removeEventListener("mouseup",stop)
 
 }
 
-document.addEventListener("mousemove",move);
-document.addEventListener("mouseup",stop);
+document.addEventListener("mousemove",move)
+document.addEventListener("mouseup",stop)
 
-});
+})
 
+/* TOUCH DRAG */
 
-/* ===== TOUCH DRAG (MOBILE) ===== */
+object.addEventListener("touchstart",e=>{
 
-plate.addEventListener("touchstart",e=>{
+let t=e.touches[0]
 
-let touch=e.touches[0];
+startX=t.clientX-x
+startY=t.clientY-y
 
-startX=touch.clientX-x;
-startY=touch.clientY-y;
+})
 
-});
+object.addEventListener("touchmove",e=>{
 
-plate.addEventListener("touchmove",e=>{
+let t=e.touches[0]
 
-let touch=e.touches[0];
+x=t.clientX-startX
+y=t.clientY-startY
 
-x=touch.clientX-startX;
-y=touch.clientY-startY;
+update()
 
-update();
+})
 
-});
+/* ZOOM */
 
+object.addEventListener("wheel",e=>{
 
-/* ===== ZOOM ===== */
+e.preventDefault()
 
-plate.addEventListener("wheel",e=>{
+scale+=e.deltaY*-0.001
 
-e.preventDefault();
+scale=Math.max(.3,Math.min(scale,3))
 
-scale+=e.deltaY*-0.001;
+update()
 
-scale=Math.max(.3,Math.min(scale,3));
+})
 
-update();
-
-});
-
-
-/* ===== CAPTURE ===== */
+/* CAPTURE SCREENSHOT */
 
 document.getElementById("captureBtn").addEventListener("click",async()=>{
 
-const canvas=document.createElement("canvas");
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+const canvas=document.createElement("canvas")
 
-const ctx=canvas.getContext("2d");
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+
+const ctx=canvas.getContext("2d")
 
 /* draw camera */
 
-ctx.drawImage(cam,0,0,canvas.width,canvas.height);
+ctx.drawImage(cam,0,0,canvas.width,canvas.height)
 
-/* capture AR image */
+/* capture AR object */
 
-const arCanvas=await html2canvas(plate,{
+const arCanvas=await html2canvas(object,{
 backgroundColor:null,
 useCORS:true
-});
+})
 
-const rect=plate.getBoundingClientRect();
+const rect=object.getBoundingClientRect()
 
 ctx.drawImage(
 arCanvas,
@@ -252,22 +302,21 @@ rect.left,
 rect.top,
 rect.width,
 rect.height
-);
+)
 
 /* download */
 
-const link=document.createElement("a");
+const link=document.createElement("a")
 
-link.download="AR_capture.png";
+link.download="AR_capture.png"
 
-link.href=canvas.toDataURL();
+link.href=canvas.toDataURL()
 
-link.click();
+link.click()
 
-});
+})
 
-
-update();
+update()
 
 </script>
 

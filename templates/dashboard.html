@@ -1,25 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ARVR Studio Pro</title>
+<title>ARVR Studio</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
 <script type="module"
 src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
 <style>
-body{
-margin:0;
-background:#0b0f1a;
-color:white;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-overflow-x:hidden;
-}
 
-/* Background animation */
-#bg{
+/* PARTICLE BACKGROUND */
+
+#particles{
 position:fixed;
 top:0;
 left:0;
@@ -28,229 +23,437 @@ height:100%;
 z-index:-1;
 }
 
-/* Sidebar */
-.sidebar{
-background:rgba(20,20,35,.95);
-backdrop-filter:blur(20px);
-min-height:100vh;
+/* BODY */
+
+body{
+margin:0;
+font-family:Segoe UI,sans-serif;
+color:white;
+background:linear-gradient(-45deg,#020617,#0f172a,#020617,#1e293b);
+background-size:400% 400%;
+animation:bg 18s ease infinite;
 }
 
-.sidebar a{
-display:block;
-padding:12px;
-color:#cbd5e1;
-text-decoration:none;
+@keyframes bg{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
+
+/* HEADER */
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:18px 40px;
+background:rgba(15,23,42,.8);
+backdrop-filter:blur(14px);
+}
+
+.logo{
+font-size:22px;
+font-weight:700;
+color:#22c55e;
+}
+
+.nav-buttons{
+display:flex;
+gap:10px;
+}
+
+.btn-create{
+background:#06b6d4;
+padding:10px 18px;
 border-radius:10px;
-transition:.3s;
-}
-
-.sidebar a:hover{
-background:linear-gradient(90deg,#00f0ff,#7c3aed);
+text-decoration:none;
 color:white;
 }
 
-/* Card */
-.card-ar{
+.btn-logout{
+background:#ef4444;
+padding:10px 18px;
+border-radius:10px;
+text-decoration:none;
+color:white;
+}
+
+/* STATS */
+
+.stats{
+display:flex;
+justify-content:center;
+gap:80px;
+padding:40px;
+text-align:center;
+}
+
+.stat h2{
+font-size:38px;
+color:#06b6d4;
+}
+
+/* HERO */
+
+.hero{
+text-align:center;
+padding:60px 20px;
+}
+
+.hero h1{
+font-size:42px;
+}
+
+.hero p{
+color:#9ca3af;
+}
+
+/* TOOLS */
+
+.tools{
+padding:60px 40px;
+text-align:center;
+}
+
+.section-title{
+font-size:32px;
+margin-bottom:40px;
+}
+
+.tool-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:30px;
+}
+
+.tool-card{
 background:rgba(255,255,255,.05);
+backdrop-filter:blur(12px);
+border-radius:18px;
 padding:20px;
-border-radius:20px;
-backdrop-filter:blur(10px);
-position:relative;
 transition:.3s;
 }
 
-.card-ar:hover{
+.tool-card:hover{
+transform:translateY(-8px);
+box-shadow:0 20px 40px rgba(0,0,0,.6);
+}
+
+.tool-card img{
+width:100%;
+height:170px;
+object-fit:cover;
+border-radius:12px;
+margin-bottom:12px;
+}
+
+.tool-btn{
+display:inline-block;
+margin-top:10px;
+background:#06b6d4;
+padding:8px 18px;
+border-radius:8px;
+color:white;
+text-decoration:none;
+}
+
+/* SEARCH */
+
+.search{
+display:flex;
+justify-content:center;
+padding:30px;
+}
+
+.search input{
+width:450px;
+padding:15px;
+border:none;
+border-radius:14px;
+background:rgba(255,255,255,.08);
+color:white;
+}
+
+/* PROJECTS */
+
+.projects{
+padding:40px;
+}
+
+.project-card{
+background:rgba(255,255,255,.06);
+backdrop-filter:blur(12px);
+border-radius:16px;
+padding:15px;
+transition:.25s;
+position:relative;
+}
+
+.project-card:hover{
 transform:translateY(-6px);
-box-shadow:0 15px 50px rgba(0,240,255,.2);
+}
+
+.project-img{
+width:100%;
+height:170px;
+border-radius:12px;
+object-fit:cover;
 }
 
 model-viewer{
 width:100%;
-height:220px;
-border-radius:15px;
+height:170px;
+border-radius:12px;
 }
 
-/* Delete button */
+.btn-ar{
+margin-top:10px;
+width:100%;
+background:#06b6d4;
+border:none;
+border-radius:10px;
+padding:10px;
+color:white;
+}
+
 .delete-btn{
 position:absolute;
 top:10px;
-right:12px;
-background:rgba(255,0,60,.85);
-color:white;
-width:30px;
-height:30px;
+right:10px;
+background:#ef4444;
+width:28px;
+height:28px;
 border-radius:50%;
 display:flex;
 align-items:center;
 justify-content:center;
+color:white;
 text-decoration:none;
-font-weight:bold;
-transition:.3s;
-z-index:10;
 }
 
-.delete-btn:hover{
-background:red;
-transform:scale(1.15);
-}
+/* FLOAT BUTTON */
 
-/* Mobile fix */
-@media(max-width:768px){
-.sidebar{
+.float-btn{
 position:fixed;
-z-index:999;
-width:220px;
-left:-220px;
-transition:.3s;
-}
-
-.sidebar.active{
-left:0;
-}
-
-.main-content{
-margin-left:0;
-}
-
-.menu-btn{
-position:fixed;
-top:15px;
-left:15px;
-z-index:1000;
-background:#00bcd4;
-border:none;
-padding:10px 15px;
-border-radius:8px;
+bottom:90px;
+right:30px;
+width:60px;
+height:60px;
+border-radius:50%;
+background:#06b6d4;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:28px;
+text-decoration:none;
 color:white;
 }
-}
+
+/* FOOTER */
 
 .footer{
+text-align:center;
+padding:40px;
 color:#94a3b8;
-font-size:14px;
-margin-top:50px;
 }
+
 </style>
 </head>
 
 <body>
 
-<canvas id="bg"></canvas>
+<canvas id="particles"></canvas>
 
-<!-- Mobile Menu Button -->
-<button class="menu-btn d-md-none" onclick="toggleMenu()">☰</button>
+<!-- HEADER -->
 
-<div class="container-fluid">
-<div class="row">
+<div class="header">
 
-<!-- Sidebar -->
-<div class="col-md-2 sidebar p-4" id="sidebar">
-<h4 class="text-info mb-4">ARVR Studio</h4>
-<a href="/">Dashboard</a>
-<a href="/create">Create Project</a>
-<a href="/wall-ar">Wall AR</a>
-<a href="/logout">Logout</a>
+<div class="logo">ARVR Studio</div>
+
+<div class="nav-buttons">
+<a href="/create" class="btn-create">Create</a>
+<a href="/logout" class="btn-logout">Logout</a>
 </div>
 
-<!-- Main Content -->
-<div class="col-md-10 p-4 main-content">
+</div>
 
-<h1 class="mb-4 text-info">AI Powered AR/VR Dashboard</h1>
+<!-- STATS -->
 
-<div class="row g-4">
+<div class="stats">
+
+<div class="stat">
+<h2>{{ projects|length }}</h2>
+<p>Projects</p>
+</div>
+
+<div class="stat">
+<h2>500</h2>
+<p>AR Views</p>
+</div>
+
+<div class="stat">
+<h2>120</h2>
+<p>Creators</p>
+</div>
+
+</div>
+
+<!-- HERO -->
+
+<div class="hero">
+
+<h1>Explore AR Experiences</h1>
+<p>Create immersive augmented reality projects using images and 3D models.</p>
+
+</div>
+
+<!-- AR TOOLS -->
+
+<section class="tools">
+
+<h2 class="section-title">AR Tools</h2>
+
+<div class="tool-grid">
+
+<div class="tool-card">
+<img src="https://images.unsplash.com/photo-1581090700227-1e37b190418e">
+<h3>AR Image Viewer</h3>
+<p>Upload an image and preview it in AR.</p>
+<a href="/create" class="tool-btn">Try</a>
+</div>
+
+<div class="tool-card">
+<img src="https://images.unsplash.com/photo-1596495577886-d920f1fb7238">
+<h3>3D Model AR</h3>
+<p>Place GLB models in your environment.</p>
+<a href="/create" class="tool-btn">Try</a>
+</div>
+
+<div class="tool-card">
+<img src="https://images.unsplash.com/photo-1600585154526-990dced4db0d">
+<h3>Wall Color AR</h3>
+<p>Preview wall colors using AR.</p>
+<a href="/wall-ar" class="tool-btn">Open</a>
+</div>
+
+</div>
+
+</section>
+
+<!-- SEARCH -->
+
+<div class="search">
+<input id="searchInput" type="text" placeholder="Search projects...">
+</div>
+
+<!-- PROJECTS -->
+
+<div class="projects">
+
+<h2 class="section-title">My Projects</h2>
+
+<div class="row g-4" id="projectGrid">
 
 {% for p in projects %}
-<div class="col-sm-6 col-lg-4">
-<div class="card-ar">
 
-<a href="{{ url_for('delete_project', id=p.id) }}"
-onclick="return confirm('Delete project?')"
-class="delete-btn">✕</a>
+<div class="col-md-3 col-6 project-item">
 
-<h5>{{ p.name }}</h5>
+<div class="project-card">
+
+<a href="/delete/{{p.id}}" class="delete-btn">✕</a>
+
+<h6 class="project-name">{{p.name}}</h6>
 
 {% if p.type == 'model' %}
 
-<model-viewer
-src="{{ p.file_url }}"
-camera-controls
-auto-rotate
-shadow-intensity="1"
-ar>
-</model-viewer>
+<model-viewer src="{{p.file_url}}" camera-controls auto-rotate></model-viewer>
 
-<a href="{{ url_for('model_ar', project_id=p.id) }}"
-class="btn btn-info w-100 mt-3">
-View Model AR
-</a>
+<a href="/model-ar/{{p.id}}" class="btn btn-ar">View AR</a>
 
 {% else %}
 
-<img src="{{ p.file_url }}"
-class="img-fluid rounded mb-3"/>
+<img src="{{p.file_url}}" class="project-img">
 
-<a href="{{ url_for('image_ar', project_id=p.id) }}"
-class="btn btn-info w-100">
-View Image AR
-</a>
+<a href="/image-ar/{{p.id}}" class="btn btn-ar">View AR</a>
 
 {% endif %}
 
 </div>
+
 </div>
+
 {% endfor %}
 
 </div>
 
-<div class="footer text-center mt-5">
-© 2026 ARVR Studio
 </div>
 
-</div>
-</div>
+<a href="/create" class="float-btn">+</a>
+
+<div class="footer">
+© 2026 ARVR Studio • Built for immersive AR experiences
 </div>
 
 <script>
-/* Sidebar toggle mobile */
-function toggleMenu(){
-document.getElementById("sidebar").classList.toggle("active");
+
+/* SEARCH */
+
+document.getElementById("searchInput").addEventListener("keyup", function(){
+
+let value=this.value.toLowerCase()
+
+document.querySelectorAll(".project-item").forEach(card=>{
+
+let name=card.querySelector(".project-name").innerText.toLowerCase()
+
+card.style.display=name.includes(value)?"block":"none"
+
+})
+
+})
+
+/* PARTICLES */
+
+const canvas=document.getElementById("particles")
+const ctx=canvas.getContext("2d")
+
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+
+let particles=[]
+
+for(let i=0;i<60;i++){
+particles.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+r:Math.random()*2
+})
 }
 
-/* Background particles */
-const canvas=document.getElementById("bg");
-const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+function draw(){
 
-const renderer=new THREE.WebGLRenderer({canvas:canvas,alpha:true});
-renderer.setSize(window.innerWidth,window.innerHeight);
+ctx.clearRect(0,0,canvas.width,canvas.height)
 
-const geo=new THREE.BufferGeometry();
-const verts=[];
+particles.forEach(p=>{
 
-for(let i=0;i<1200;i++){
-verts.push(
-THREE.MathUtils.randFloatSpread(100),
-THREE.MathUtils.randFloatSpread(100),
-THREE.MathUtils.randFloatSpread(100)
-);
+ctx.beginPath()
+ctx.arc(p.x,p.y,p.r,0,Math.PI*2)
+ctx.fillStyle="rgba(255,255,255,.25)"
+ctx.fill()
+
+p.y+=0.3
+
+if(p.y>canvas.height)p.y=0
+
+})
+
+requestAnimationFrame(draw)
+
 }
 
-geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-const mat=new THREE.PointsMaterial({color:0x00f0ff,size:0.4});
-const particles=new THREE.Points(geo,mat);
+draw()
 
-scene.add(particles);
-camera.position.z=50;
-
-function animate(){
-requestAnimationFrame(animate);
-particles.rotation.y+=0.0007;
-renderer.render(scene,camera);
-}
-animate();
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

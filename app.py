@@ -1,4 +1,5 @@
 import os
+import uuid
 from flask import Flask, render_template, request, redirect, session, abort, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
@@ -12,11 +13,13 @@ app = Flask(__name__)
 # ---------- SECRET KEY ----------
 app.secret_key = os.environ.get("SECRET_KEY", "dev_secret_key")
 
-# ---------- SESSION FIX ----------
-app.config["SESSION_COOKIE_SECURE"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "None"
+# ---------- SESSION CONFIG ----------
+# NOTE: disable secure cookie locally
+app.config["SESSION_COOKIE_SECURE"] = False
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 # ---------- DATABASE ----------
+
 db_url = os.environ.get("DATABASE_URL")
 
 if not db_url:
@@ -32,10 +35,13 @@ db = SQLAlchemy(app)
 
 # ---------- UPLOAD CONFIG ----------
 
-UPLOAD_FOLDER = "uploads"
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "glb"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -65,18 +71,42 @@ with app.app_context():
 
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
+
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+    if not os.path.exists(filepath):
+        abort(404)
+
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
-# ---------- ROUTES ----------
+# ---------- DASHBOARD ----------
 
 
 @app.route("/")
 def dashboard():
 
-    projects = Project.query.all()
+    projects = Project.query.order_by(Project.id.desc()).all()
 
-    return render_template("dashboard.html", projects=projects)
+    # remove broken file records
+    valid_projects = []
+
+    for p in projects:
+        if p.file_url.startswith("/uploads/"):
+            filename = p.file_url.split("/")[-1]
+            path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+            if not os.path.exists(path):
+                db.session.delete(p)
+                db.session.commit()
+                continue
+
+        valid_projects.append(p)
+
+    return render_template("dashboard.html", projects=valid_projects)
+
+
+# ---------- IMAGE AR ----------
 
 
 @app.route("/image-ar/<int:project_id>")
@@ -90,6 +120,9 @@ def image_ar(project_id):
     return render_template("image_ar.html", project=project)
 
 
+# ---------- MODEL AR ----------
+
+
 @app.route("/model-ar/<int:project_id>")
 def model_ar(project_id):
 
@@ -101,7 +134,7 @@ def model_ar(project_id):
     return render_template("model_ar.html", project=project)
 
 
-# ---------- CREATE PROJECT ----------
+# ---------- CREATE PAGE ----------
 
 
 @app.route("/create")
@@ -132,7 +165,6 @@ def verify_pin():
     if pin == correct_pin:
 
         session["create_auth"] = True
-
         session.permanent = True
 
         return redirect(next_page)
@@ -154,9 +186,7 @@ def save():
         return redirect("/create")
 
     name = request.form.get("name")
-
     ptype = request.form.get("type")
-
     file = request.files.get("file")
 
     if not file or file.filename == "":
@@ -167,7 +197,7 @@ def save():
 
     try:
 
-        filename = secure_filename(file.filename)
+        filename = str(uuid.uuid4()) + "_" + secure_filename(file.filename)
 
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
@@ -182,7 +212,6 @@ def save():
         )
 
         db.session.add(project)
-
         db.session.commit()
 
         return redirect("/")
@@ -217,14 +246,12 @@ def delete_project(id):
                 os.remove(filepath)
 
         db.session.delete(project)
-
         db.session.commit()
 
-    except:
+    except Exception as e:
 
         db.session.rollback()
-
-        return "Delete failed", 500
+        return f"Delete failed: {e}", 500
 
     return redirect("/")
 
@@ -258,5 +285,6 @@ if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=port
+        port=port,
+        debug=True
     )
