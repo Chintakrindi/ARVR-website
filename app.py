@@ -8,19 +8,23 @@ from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 
-# ---------- LOAD ENV ----------
+# -----------------------------
+# LOAD ENVIRONMENT VARIABLES
+# -----------------------------
+
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 
-# ---------- SECRET KEY ----------
+# -----------------------------
+# SECRET KEY
+# -----------------------------
+
 app.secret_key = os.environ.get("SECRET_KEY")
 
-# ---------- SESSION CONFIG ----------
-app.config["SESSION_COOKIE_SECURE"] = False
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-
-# ---------- DATABASE CONFIG ----------
+# -----------------------------
+# DATABASE CONFIG
+# -----------------------------
 
 db_url = os.environ.get("DATABASE_URL")
 
@@ -32,7 +36,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# ---------- CLOUDINARY CONFIG ----------
+# -----------------------------
+# CLOUDINARY CONFIG
+# -----------------------------
 
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
@@ -41,15 +47,18 @@ cloudinary.config(
     secure=True
 )
 
-# ---------- ALLOWED FILE TYPES ----------
+# -----------------------------
+# ALLOWED FILE TYPES
+# -----------------------------
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "glb"}
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
-# ---------- DATABASE MODEL ----------
+# -----------------------------
+# DATABASE MODEL
+# -----------------------------
 
 class Project(db.Model):
 
@@ -62,13 +71,17 @@ class Project(db.Model):
     type = db.Column(db.String(50), nullable=False)
 
 
-# ---------- CREATE TABLES ----------
+# -----------------------------
+# CREATE TABLES
+# -----------------------------
 
 with app.app_context():
     db.create_all()
 
 
-# ---------- DASHBOARD ----------
+# -----------------------------
+# DASHBOARD
+# -----------------------------
 
 @app.route("/")
 def dashboard():
@@ -78,7 +91,9 @@ def dashboard():
     return render_template("dashboard.html", projects=projects)
 
 
-# ---------- IMAGE AR ----------
+# -----------------------------
+# IMAGE AR VIEW
+# -----------------------------
 
 @app.route("/image-ar/<int:project_id>")
 def image_ar(project_id):
@@ -91,7 +106,9 @@ def image_ar(project_id):
     return render_template("image_ar.html", project=project)
 
 
-# ---------- MODEL AR ----------
+# -----------------------------
+# MODEL AR VIEW
+# -----------------------------
 
 @app.route("/model-ar/<int:project_id>")
 def model_ar(project_id):
@@ -104,7 +121,9 @@ def model_ar(project_id):
     return render_template("model_ar.html", project=project)
 
 
-# ---------- CREATE PAGE ----------
+# -----------------------------
+# CREATE PROJECT PAGE
+# -----------------------------
 
 @app.route("/create")
 def create_project():
@@ -119,7 +138,9 @@ def create_project():
     return render_template("create_project.html")
 
 
-# ---------- VERIFY PIN ----------
+# -----------------------------
+# VERIFY ADMIN PIN
+# -----------------------------
 
 @app.route("/verify-pin", methods=["POST"])
 def verify_pin():
@@ -144,7 +165,9 @@ def verify_pin():
     )
 
 
-# ---------- SAVE PROJECT (UPLOAD TO CLOUDINARY) ----------
+# -----------------------------
+# SAVE PROJECT (UPLOAD)
+# -----------------------------
 
 @app.route("/save", methods=["POST"])
 def save():
@@ -192,7 +215,9 @@ def save():
         return f"Upload error: {e}", 500
 
 
-# ---------- DELETE PROJECT ----------
+# -----------------------------
+# DELETE PROJECT
+# -----------------------------
 
 @app.route("/delete/<int:id>")
 def delete_project(id):
@@ -215,7 +240,9 @@ def delete_project(id):
     return redirect("/")
 
 
-# ---------- LOGOUT ----------
+# -----------------------------
+# LOGOUT
+# -----------------------------
 
 @app.route("/logout")
 def logout():
@@ -225,7 +252,9 @@ def logout():
     return redirect("/")
 
 
-# ---------- WALL AR ----------
+# -----------------------------
+# WALL AR TOOL
+# -----------------------------
 
 @app.route("/wall-ar")
 def wall_ar():
@@ -233,7 +262,9 @@ def wall_ar():
     return render_template("wall_ar.html")
 
 
-# ---------- RUN SERVER ----------
+# -----------------------------
+# RUN SERVER
+# -----------------------------
 
 if __name__ == "__main__":
 
