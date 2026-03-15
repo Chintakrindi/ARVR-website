@@ -1,369 +1,208 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
 
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#000000">
-
-<title>AR Viewer</title>
-
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image AR</title>
 
 <style>
 
-html,body{
+body{
 margin:0;
-padding:0;
 overflow:hidden;
+font-family:Arial;
 background:black;
-font-family:Segoe UI;
-height:100%;
-}
-
-/* CAMERA */
-
-video{
-position:fixed;
-top:0;
-left:0;
-width:100vw;
-height:100vh;
-object-fit:cover;
-z-index:1;
+color:white;
 }
 
 /* START BUTTON */
 
-.startBtn{
-position:fixed;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:#0072ff;
-border:none;
-padding:18px 60px;
-border-radius:50px;
-color:white;
-font-size:20px;
-z-index:3000;
-cursor:pointer;
-}
-
-/* AR OBJECT */
-
-.arObject{
-position:fixed;
-width:260px;
-border-radius:20px;
-z-index:10;
-transform:translate(-50%,-50%);
-touch-action:none;
-cursor:grab;
-}
-
-.arObject img{
-width:100%;
-border-radius:20px;
-pointer-events:none;
-}
-
-/* SHADOW */
-
-.shadow{
-position:absolute;
-bottom:-18px;
-left:50%;
-width:70%;
-height:20px;
-background:radial-gradient(ellipse,rgba(0,0,0,.5),transparent);
-transform:translateX(-50%);
-filter:blur(8px);
-}
-
-/* CAPTURE BUTTON */
-
-.captureBtn{
+#startAR{
 position:fixed;
 bottom:40px;
 left:50%;
 transform:translateX(-50%);
-background:#0072ff;
+padding:16px 40px;
 border:none;
-padding:16px 60px;
-border-radius:50px;
+border-radius:30px;
+background:#06b6d4;
 color:white;
 font-size:18px;
-z-index:2000;
+z-index:10;
 cursor:pointer;
 }
 
-/* OPEN IN BROWSER MESSAGE */
+/* MESSAGE */
 
-.browserBlock{
+#msg{
 position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:black;
-color:white;
-display:flex;
-align-items:center;
-justify-content:center;
-text-align:center;
-padding:30px;
-z-index:9999;
-font-size:20px;
+top:20px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,.6);
+padding:10px 20px;
+border-radius:20px;
+font-size:14px;
 }
 
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
 </head>
 
 <body>
 
-<div id="browserMessage" class="browserBlock" style="display:none;">
-<div>
-<h2>Open in Browser</h2>
-<p>This AR experience requires camera access.</p>
-<p>Please open this link in <b>Chrome, Safari, or Edge</b>.</p>
-<p>Tap menu ⋮ → <b>Open in Browser</b></p>
-</div>
+<div id="msg">
+Point camera at wall → Tap screen to place image
 </div>
 
-<button class="startBtn" id="startAR">Start AR</button>
-
-<video id="cam" autoplay muted playsinline></video>
-
-<div class="arObject" id="object">
-
-<img src="{{ project.file_url }}">
-
-<div class="shadow"></div>
-
-</div>
-
-<button class="captureBtn" id="captureBtn">📸 Capture</button>
+<button id="startAR">Start AR</button>
 
 <script>
 
-/* DETECT IN-APP BROWSER */
+let scene, camera, renderer;
+let controller;
+let reticle;
+let hitTestSource=null;
 
-const ua = navigator.userAgent || navigator.vendor || window.opera;
+init();
 
-if (ua.includes("FBAN") || ua.includes("FBAV") || ua.includes("Instagram") || ua.includes("WhatsApp")) {
+function init(){
 
-document.getElementById("browserMessage").style.display="flex";
+scene = new THREE.Scene();
 
-}
+camera = new THREE.PerspectiveCamera();
 
-/* CAMERA START */
+renderer = new THREE.WebGLRenderer({alpha:true,antialias:true});
 
-const cam = document.getElementById("cam")
+renderer.setSize(window.innerWidth,window.innerHeight);
 
-document.getElementById("startAR").onclick = async () => {
+renderer.xr.enabled=true;
 
-try{
+document.body.appendChild(renderer.domElement);
 
-const constraints={
-video:{
-facingMode:{ideal:"environment"}
-},
-audio:false
-}
+/* LIGHT */
 
-const stream = await navigator.mediaDevices.getUserMedia(constraints)
+const light = new THREE.HemisphereLight(0xffffff,0xbbbbff,1);
 
-cam.srcObject = stream
+scene.add(light);
 
-await cam.play()
+/* RETICLE */
 
-document.getElementById("startAR").style.display="none"
+const geometry = new THREE.RingGeometry(0.15,0.2,32).rotateX(-Math.PI/2);
 
-}catch(err){
+const material = new THREE.MeshBasicMaterial({color:0xffffff});
 
-alert("Camera access not supported on this device")
+reticle = new THREE.Mesh(geometry,material);
 
-}
+reticle.matrixAutoUpdate=false;
 
-}
+reticle.visible=false;
 
-/* OBJECT STATE */
+scene.add(reticle);
 
-const object = document.getElementById("object")
+/* CONTROLLER */
 
-let x = window.innerWidth/2
-let y = window.innerHeight/2
-let scale = 1
-let rotation = 0
+controller = renderer.xr.getController(0);
 
-function update(){
+controller.addEventListener("select", placeImage);
 
-object.style.transform =
-`translate(${x}px,${y}px)
- translate(-50%,-50%)
- scale(${scale})
- rotate(${rotation}deg)`
+scene.add(controller);
+
+/* START BUTTON */
+
+document.getElementById("startAR").onclick=startAR;
 
 }
 
-update()
+/* START AR */
 
-/* DRAG */
+async function startAR(){
 
-let dragging=false
-let startX=0
-let startY=0
+if(!navigator.xr){
 
-object.addEventListener("mousedown",e=>{
+alert("WebXR not supported on this device");
 
-dragging=true
-
-startX=e.clientX-x
-startY=e.clientY-y
-
-})
-
-document.addEventListener("mousemove",e=>{
-
-if(!dragging)return
-
-x=e.clientX-startX
-y=e.clientY-startY
-
-update()
-
-})
-
-document.addEventListener("mouseup",()=>{
-
-dragging=false
-
-})
-
-/* TOUCH DRAG */
-
-object.addEventListener("touchstart",e=>{
-
-if(e.touches.length===1){
-
-dragging=true
-
-startX=e.touches[0].clientX-x
-startY=e.touches[0].clientY-y
+return;
 
 }
 
-})
+const session = await navigator.xr.requestSession("immersive-ar",{
+requiredFeatures:["hit-test"]
+});
 
-object.addEventListener("touchmove",e=>{
+renderer.xr.setSession(session);
 
-if(dragging && e.touches.length===1){
+const viewerSpace = await session.requestReferenceSpace("viewer");
 
-x=e.touches[0].clientX-startX
-y=e.touches[0].clientY-startY
+hitTestSource = await session.requestHitTestSource({space:viewerSpace});
 
-update()
-
-}
-
-})
-
-object.addEventListener("touchend",()=>{
-
-dragging=false
-
-})
-
-/* PINCH ZOOM */
-
-let startDistance=0
-let startScale=1
-
-function getDistance(a,b){
-
-return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)
+renderer.setAnimationLoop(render);
 
 }
 
-object.addEventListener("touchstart",e=>{
+/* PLACE IMAGE */
 
-if(e.touches.length===2){
+function placeImage(){
 
-startDistance=getDistance(e.touches[0],e.touches[1])
-startScale=scale
+if(!reticle.visible) return;
+
+const texture = new THREE.TextureLoader().load("{{ project.file_url }}");
+
+const geometry = new THREE.PlaneGeometry(0.7,0.7);
+
+const material = new THREE.MeshBasicMaterial({
+map:texture,
+side:THREE.DoubleSide
+});
+
+const plane = new THREE.Mesh(geometry,material);
+
+plane.position.setFromMatrixPosition(reticle.matrix);
+
+plane.quaternion.setFromRotationMatrix(reticle.matrix);
+
+scene.add(plane);
 
 }
 
-})
+/* RENDER LOOP */
 
-object.addEventListener("touchmove",e=>{
+function render(timestamp, frame){
 
-if(e.touches.length===2){
+if(frame){
 
-let newDistance=getDistance(e.touches[0],e.touches[1])
+const referenceSpace = renderer.xr.getReferenceSpace();
 
-scale=startScale*(newDistance/startDistance)
+const hitTestResults = frame.getHitTestResults(hitTestSource);
 
-scale=Math.max(.3,Math.min(scale,4))
+if(hitTestResults.length){
 
-update()
+const hit = hitTestResults[0];
+
+const pose = hit.getPose(referenceSpace);
+
+reticle.visible=true;
+
+reticle.matrix.fromArray(pose.transform.matrix);
+
+}else{
+
+reticle.visible=false;
 
 }
 
-})
+}
 
-/* DESKTOP ZOOM */
+renderer.render(scene,camera);
 
-object.addEventListener("wheel",e=>{
-
-e.preventDefault()
-
-scale+=e.deltaY*-0.001
-
-scale=Math.max(.3,Math.min(scale,4))
-
-update()
-
-})
-
-/* CAPTURE SCREENSHOT */
-
-document.getElementById("captureBtn").addEventListener("click",async()=>{
-
-const canvas=document.createElement("canvas")
-
-canvas.width=window.innerWidth
-canvas.height=window.innerHeight
-
-const ctx=canvas.getContext("2d")
-
-ctx.drawImage(cam,0,0,canvas.width,canvas.height)
-
-const arCanvas=await html2canvas(object,{
-backgroundColor:null,
-useCORS:true
-})
-
-const rect=object.getBoundingClientRect()
-
-ctx.drawImage(arCanvas,rect.left,rect.top,rect.width,rect.height)
-
-const link=document.createElement("a")
-
-link.download="AR_capture.png"
-
-link.href=canvas.toDataURL()
-
-link.click()
-
-})
+}
 
 </script>
 
 </body>
-
 </html>
-
-
+```

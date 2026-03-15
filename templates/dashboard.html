@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,13 +11,10 @@
 
 <title>ARVR Studio</title>
 
-<!-- Favicon -->
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2721/2721291.png">
 
-<!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<!-- Model Viewer -->
 <script type="module"
 src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
@@ -117,49 +115,6 @@ text-align:center;
 color:#06b6d4;
 }
 
-/* FEATURES */
-
-.features{
-padding:30px 18px;
-}
-
-.feature-grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:18px;
-}
-
-.feature-card{
-background:#0f172a;
-border-radius:14px;
-padding:18px;
-text-align:center;
-transition:.25s;
-}
-
-.feature-card:hover{
-transform:translateY(-4px);
-}
-
-.feature-card img{
-width:100%;
-height:150px;
-object-fit:cover;
-border-radius:10px;
-margin-bottom:10px;
-}
-
-.tool-btn{
-display:inline-block;
-margin-top:8px;
-background:#06b6d4;
-padding:7px 16px;
-border-radius:8px;
-color:white;
-text-decoration:none;
-font-size:14px;
-}
-
 /* SEARCH */
 
 .search{
@@ -201,10 +156,12 @@ object-fit:cover;
 
 model-viewer{
 width:100%;
-height:140px;
+height:160px;
 border-radius:8px;
 background:#000;
 }
+
+/* AR BUTTON */
 
 .btn-ar{
 width:100%;
@@ -215,6 +172,7 @@ border-radius:8px;
 padding:6px;
 color:white;
 font-size:14px;
+cursor:pointer;
 }
 
 .delete-btn{
@@ -269,16 +227,12 @@ font-size:13px;
 font-size:24px;
 }
 
-.feature-card img{
-height:130px;
-}
-
 .project-img{
 height:120px;
 }
 
 model-viewer{
-height:120px;
+height:140px;
 }
 
 }
@@ -368,13 +322,23 @@ height:120px;
 src="{{p.file_url}}"
 camera-controls
 auto-rotate
+loading="lazy"
+
 ar
 ar-modes="webxr scene-viewer quick-look"
 ar-placement="floor"
-loading="lazy"
-></model-viewer>
+ar-scale="auto"
 
-<a href="/model-ar/{{p.id}}" class="btn btn-ar">View AR</a>
+environment-image="neutral"
+shadow-intensity="1"
+interaction-prompt="auto"
+>
+
+<button slot="ar-button" class="btn-ar">
+View in AR
+</button>
+
+</model-viewer>
 
 {% else %}
 
@@ -404,7 +368,7 @@ loading="lazy"
 
 <script>
 
-/* SEARCH */
+/* SEARCH FILTER */
 
 document.getElementById("searchInput").addEventListener("keyup",function(){
 
@@ -423,7 +387,5 @@ card.style.display=name.includes(value)?"":"none"
 </script>
 
 </body>
-
 </html>
-
-
+```
