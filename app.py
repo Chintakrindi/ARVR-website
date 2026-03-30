@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 
+
 # -----------------------------
 # LOAD ENVIRONMENT VARIABLES
 # -----------------------------
@@ -16,25 +17,23 @@ load_dotenv()
 
 app = Flask(__name__, template_folder="templates")
 
+
 # -----------------------------
 # SECRET KEY
 # -----------------------------
 
-app.secret_key = os.environ.get("SECRET_KEY")
+app.secret_key = "dev-secret-key"
+
 
 # -----------------------------
-# DATABASE CONFIG
+# DATABASE CONFIG (LOCAL SQLITE ONLY)
 # -----------------------------
 
-db_url = os.environ.get("DATABASE_URL")
-
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///local.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+
 
 # -----------------------------
 # CLOUDINARY CONFIG
@@ -47,14 +46,17 @@ cloudinary.config(
     secure=True
 )
 
+
 # -----------------------------
 # ALLOWED FILE TYPES
 # -----------------------------
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "glb"}
 
+
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 # -----------------------------
 # DATABASE MODEL
@@ -149,7 +151,7 @@ def verify_pin():
 
     next_page = request.form.get("next_page") or "/"
 
-    correct_pin = os.environ.get("ADMIN_PIN")
+    correct_pin = "1234"
 
     if pin == correct_pin:
 
@@ -268,10 +270,8 @@ def wall_ar():
 
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT", 5000))
-
     app.run(
         host="0.0.0.0",
-        port=port,
+        port=5000,
         debug=True
     )
