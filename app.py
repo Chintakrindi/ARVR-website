@@ -6,12 +6,11 @@ from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 
-# LOAD ENV
+# LOAD ENV VARIABLES
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret")
-
 
 # DATABASE CONFIG
 
@@ -37,7 +36,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-
 # CLOUDINARY CONFIG
 
 cloudinary.config(
@@ -47,11 +45,10 @@ cloudinary.config(
     secure=True
 )
 
-
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "1234")
 
-
 # DATABASE MODEL
+
 
 class Project(db.Model):
 
@@ -107,6 +104,7 @@ def create_project():
 def verify_pin():
 
     pin = request.form.get("pin")
+
     next_page = request.form.get("next_page")
 
     if pin == ADMIN_PIN:
@@ -160,7 +158,9 @@ def model_ar(project_id):
 def save():
 
     file = request.files.get("file")
+
     name = request.form.get("name")
+
     ptype = request.form.get("type")
 
     if not file:
@@ -182,42 +182,10 @@ def save():
     )
 
     db.session.add(project)
+
     db.session.commit()
 
     return redirect("/")
-
-
-# ===============================
-# SAVE AR CAPTURE
-# ===============================
-
-@app.route("/save_capture", methods=["POST"])
-def save_capture():
-
-    file = request.files.get("image")
-
-    if not file:
-        return "No image received", 400
-
-    public_id = "capture_" + str(uuid.uuid4())
-
-    upload = cloudinary.uploader.upload(
-        file,
-        public_id=public_id,
-        resource_type="image"
-    )
-
-    project = Project(
-        name="Captured AR Image",
-        file_url=upload["secure_url"],
-        public_id=public_id,
-        type="capture"
-    )
-
-    db.session.add(project)
-    db.session.commit()
-
-    return "Capture saved successfully", 200
 
 
 # ===============================
@@ -232,6 +200,7 @@ def delete_project(id):
     cloudinary.uploader.destroy(project.public_id)
 
     db.session.delete(project)
+
     db.session.commit()
 
     return redirect("/")
