@@ -29,7 +29,7 @@ height:100vh;
 object-fit:cover;
 }
 
-/* AR PANEL */
+/* AR IMAGE PANEL */
 
 .arImage{
 position:fixed;
@@ -64,7 +64,7 @@ cursor:pointer;
 z-index:9999;
 }
 
-/* PREVIEW POPUP */
+/* POPUP PREVIEW */
 
 #previewPopup{
 display:none;
@@ -73,7 +73,7 @@ top:0;
 left:0;
 width:100vw;
 height:100vh;
-background:rgba(0,0,0,.9);
+background:rgba(0,0,0,.85);
 align-items:center;
 justify-content:center;
 flex-direction:column;
@@ -86,18 +86,12 @@ max-height:80%;
 border-radius:12px;
 }
 
-#saveHint{
-color:white;
-margin-top:15px;
-font-size:16px;
-}
-
 #closePreview{
 position:absolute;
 top:20px;
 right:30px;
 color:white;
-font-size:28px;
+font-size:30px;
 cursor:pointer;
 }
 
@@ -116,18 +110,11 @@ cursor:pointer;
 📸 Capture
 </button>
 
-
-<!-- POPUP -->
-
 <div id="previewPopup">
 
 <span id="closePreview">✕</span>
 
 <img id="previewImage">
-
-<div id="saveHint">
-Tap & hold image to save (iPhone) or auto-downloaded (Android/Desktop)
-</div>
 
 </div>
 
@@ -145,7 +132,7 @@ cam.srcObject=stream;
 });
 
 
-/* DRAG / ZOOM / ROTATE VARIABLES */
+/* TRANSFORM VARIABLES */
 
 let plate=document.getElementById("plate");
 
@@ -204,7 +191,7 @@ update();
 };
 
 
-/* TOUCH SUPPORT */
+/* TOUCH START */
 
 plate.addEventListener("touchstart",e=>{
 
@@ -224,6 +211,8 @@ startAngle=getAngle(e);
 
 });
 
+
+/* TOUCH MOVE */
 
 plate.addEventListener("touchmove",e=>{
 
@@ -295,15 +284,13 @@ btn.style.display="block";
 
 let imageURL=canvas.toDataURL("image/png");
 
-
 /* SHOW POPUP */
 
 document.getElementById("previewImage").src=imageURL;
 
 document.getElementById("previewPopup").style.display="flex";
 
-
-/* AUTO DOWNLOAD (ANDROID + DESKTOP) */
+/* DOWNLOAD IMAGE */
 
 let link=document.createElement("a");
 
@@ -311,34 +298,12 @@ link.download="AR_capture.png";
 
 link.href=imageURL;
 
-document.body.appendChild(link);
-
 link.click();
-
-document.body.removeChild(link);
-
-
-/* UPLOAD TO SERVER */
-
-canvas.toBlob(async function(blob){
-
-let formData=new FormData();
-
-formData.append("image",blob,"capture.png");
-
-await fetch("/save_capture",{
-method:"POST",
-body:formData
-});
-
-});
 
 });
 
 };
 
-
-/* CLOSE POPUP */
 
 document.getElementById("closePreview").onclick=function(){
 
