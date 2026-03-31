@@ -102,10 +102,12 @@ class Project(db.Model):
 # CREATE TABLES SAFELY
 # -----------------------------
 
-@app.before_first_request
-def create_tables():
-    db.create_all()
+# -----------------------------
+# CREATE TABLES SAFELY
+# -----------------------------
 
+with app.app_context():
+    db.create_all()
 
 # -----------------------------
 # DASHBOARD
