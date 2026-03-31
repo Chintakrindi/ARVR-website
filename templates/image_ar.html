@@ -30,60 +30,37 @@ object-fit:cover;
 /* AR PANEL */
 
 #panel{
-
 position:fixed;
-
 top:50%;
 left:50%;
-
 width:320px;
-
 transform:translate(-50%,-50%);
-
 border-radius:22px;
-
-box-shadow:
-0 60px 200px rgba(0,0,0,.9);
-
+box-shadow:0 60px 200px rgba(0,0,0,.9);
 touch-action:none;
-
 }
 
 /* IMAGE */
 
 #panel img{
-
 width:100%;
 border-radius:22px;
-
 }
 
 /* BUTTON */
 
 #captureBtn{
-
 position:fixed;
-
 bottom:30px;
-
 left:50%;
-
 transform:translateX(-50%);
-
 padding:14px 40px;
-
 border-radius:40px;
-
 background:#00bcd4;
-
 color:white;
-
 border:none;
-
 font-weight:bold;
-
 cursor:pointer;
-
 }
 
 </style>
@@ -94,34 +71,39 @@ cursor:pointer;
 <video id="cam" autoplay playsinline muted></video>
 
 <div id="panel">
-<img id="arImage"
+<img
+id="arImage"
 src="{{ project.file_url }}"
-crossorigin="anonymous">
+crossorigin="anonymous"
+referrerpolicy="no-referrer">
 </div>
 
 <button id="captureBtn">📸 Capture</button>
-
 
 <script>
 
 /* START CAMERA */
 
-const cam=document.getElementById("cam");
+const cam = document.getElementById("cam");
+
+cam.setAttribute("playsinline", true);
 
 navigator.mediaDevices.getUserMedia({
-
 video:{ facingMode:"environment" }
-
-}).then(stream=>{
-
-cam.srcObject=stream;
-
+})
+.then(stream=>{
+cam.srcObject = stream;
+})
+.catch(err=>{
+alert("Camera permission denied");
+console.error(err);
 });
 
 
 /* TRANSFORM VARIABLES */
 
-const panel=document.getElementById("panel");
+const panel = document.getElementById("panel");
+const img = document.getElementById("arImage");
 
 let x=0,y=0;
 let scale=1;
@@ -134,7 +116,7 @@ let startX,startY,startDist,startAngle;
 
 function update(){
 
-panel.style.transform=`
+panel.style.transform = `
 translate(calc(-50% + ${x}px),
 calc(-50% + ${y}px))
 scale(${scale})
@@ -255,39 +237,49 @@ return Math.atan2(dy,dx)*180/Math.PI;
 }
 
 
-/* REAL CAPTURE ENGINE */
+/* HIGH-QUALITY CAPTURE ENGINE */
 
 document.getElementById("captureBtn").onclick=async function(){
 
 const canvas=document.createElement("canvas");
 
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+/* Use camera native resolution */
+
+canvas.width=cam.videoWidth;
+canvas.height=cam.videoHeight;
 
 const ctx=canvas.getContext("2d");
 
 
 /* DRAW CAMERA FRAME */
 
-ctx.drawImage(cam,0,0,canvas.width,canvas.height);
+ctx.drawImage(
+cam,
+0,
+0,
+canvas.width,
+canvas.height
+);
 
 
-/* DRAW AR IMAGE */
-
-const img=document.getElementById("arImage");
+/* FIX ALIGNMENT OFFSET */
 
 const rect=panel.getBoundingClientRect();
+
+const scaleX=canvas.width/window.innerWidth;
+const scaleY=canvas.height/window.innerHeight;
+
 
 ctx.save();
 
 ctx.translate(
-rect.left + rect.width/2,
-rect.top + rect.height/2
+(rect.left+rect.width/2)*scaleX,
+(rect.top+rect.height/2)*scaleY
 );
 
 ctx.rotate(rotation*Math.PI/180);
 
-ctx.scale(scale,scale);
+ctx.scale(scale*scaleX,scale*scaleY);
 
 ctx.drawImage(
 img,
@@ -300,7 +292,7 @@ rect.height
 ctx.restore();
 
 
-/* DOWNLOAD */
+/* DOWNLOAD IMAGE */
 
 const link=document.createElement("a");
 
