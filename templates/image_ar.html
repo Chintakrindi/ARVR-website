@@ -80,9 +80,10 @@ referrerpolicy="no-referrer">
 
 <button id="captureBtn">📸 Capture</button>
 
+
 <script>
 
-/* START CAMERA */
+/* CAMERA START */
 
 const cam = document.getElementById("cam");
 
@@ -237,38 +238,59 @@ return Math.atan2(dy,dx)*180/Math.PI;
 }
 
 
-/* HIGH-QUALITY CAPTURE ENGINE */
+/* PERFECT CAPTURE ENGINE */
 
 document.getElementById("captureBtn").onclick=async function(){
 
 const canvas=document.createElement("canvas");
 
-/* Use camera native resolution */
+const videoWidth=cam.videoWidth;
+const videoHeight=cam.videoHeight;
 
-canvas.width=cam.videoWidth;
-canvas.height=cam.videoHeight;
+canvas.width=videoWidth;
+canvas.height=videoHeight;
 
 const ctx=canvas.getContext("2d");
+
+
+/* HANDLE object-fit:cover CROPPING */
+
+const screenRatio=window.innerWidth/window.innerHeight;
+const videoRatio=videoWidth/videoHeight;
+
+let sx=0, sy=0, sWidth=videoWidth, sHeight=videoHeight;
+
+if(videoRatio>screenRatio){
+
+sWidth=videoHeight*screenRatio;
+sx=(videoWidth-sWidth)/2;
+
+}else{
+
+sHeight=videoWidth/screenRatio;
+sy=(videoHeight-sHeight)/2;
+
+}
 
 
 /* DRAW CAMERA FRAME */
 
 ctx.drawImage(
 cam,
-0,
-0,
+sx, sy,
+sWidth, sHeight,
+0, 0,
 canvas.width,
 canvas.height
 );
 
 
-/* FIX ALIGNMENT OFFSET */
+/* MATCH OVERLAY POSITION EXACTLY */
 
 const rect=panel.getBoundingClientRect();
 
 const scaleX=canvas.width/window.innerWidth;
 const scaleY=canvas.height/window.innerHeight;
-
 
 ctx.save();
 
@@ -292,7 +314,7 @@ rect.height
 ctx.restore();
 
 
-/* DOWNLOAD IMAGE */
+/* DOWNLOAD RESULT */
 
 const link=document.createElement("a");
 
