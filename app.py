@@ -27,22 +27,22 @@ app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret-key")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-RUNNING_LOCALLY = os.name == "nt"
+if DATABASE_URL:
 
-if DATABASE_URL and not RUNNING_LOCALLY:
-
+    # Railway compatibility fix
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace(
             "postgres://",
             "postgresql://"
         )
 
+    # Ensure SSL for hosted DB
     if "sslmode=" not in DATABASE_URL:
         DATABASE_URL += "?sslmode=require"
 
 else:
+    # fallback local database
     DATABASE_URL = "sqlite:///local.db"
-
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -70,7 +70,7 @@ ADMIN_PIN = os.environ.get("ADMIN_PIN", "1234")
 # UPLOAD SETTINGS
 # -----------------------------
 
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "glb"}
@@ -99,10 +99,11 @@ class Project(db.Model):
 
 
 # -----------------------------
-# CREATE TABLES
+# CREATE TABLES SAFELY
 # -----------------------------
 
-with app.app_context():
+@app.before_first_request
+def create_tables():
     db.create_all()
 
 
@@ -216,11 +217,11 @@ def save():
 
         public_id = str(uuid.uuid4()) + "_" + filename
 
-        # SAVE LOCALLY
+        # Save locally
         local_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(local_path)
 
-        # UPLOAD TO CLOUDINARY
+        # Upload to Cloudinary
         upload_result = cloudinary.uploader.upload(
             local_path,
             public_id=public_id,
@@ -262,7 +263,10 @@ def delete_project(id):
 
     try:
 
-        cloudinary.uploader.destroy(project.public_id)
+        cloudinary.uploader.destroy(
+            project.public_id,
+            resource_type="image"
+        )
 
         db.session.delete(project)
         db.session.commit()
@@ -299,7 +303,7 @@ def wall_ar():
 
 
 # -----------------------------
-# RUN SERVER
+# RUN SERVER (LOCAL ONLY)
 # -----------------------------
 
 if __name__ == "__main__":
