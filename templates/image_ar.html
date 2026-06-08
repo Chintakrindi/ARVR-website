@@ -2,313 +2,444 @@
 <html>
 <head>
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>AR Viewer</title>
-
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <style>
 
 body{
-margin:0;
-overflow:hidden;
-background:black;
-font-family:Segoe UI;
+    margin:0;
+    overflow:hidden;
+    background:black;
+    font-family:Segoe UI, sans-serif;
 }
 
 /* CAMERA */
 
 video{
-position:fixed;
-top:0;
-left:0;
-width:100vw;
-height:100vh;
-object-fit:cover;
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    z-index:1;
 }
 
-/* AR IMAGE PANEL */
+/* AR IMAGE */
 
 .arImage{
-position:fixed;
-top:50%;
-left:50%;
-width:320px;
-border-radius:22px;
-cursor:grab;
-touch-action:none;
-box-shadow:0 60px 200px rgba(0,0,0,.9);
+    position:fixed;
+    top:50%;
+    left:50%;
+    width:320px;
+    cursor:grab;
+    touch-action:none;
+    z-index:10;
 }
 
 .arImage img{
-width:100%;
-border-radius:22px;
+    width:100%;
+    display:block;
+    border-radius:20px;
+    box-shadow:0 20px 80px rgba(0,0,0,.6);
 }
 
 /* CAPTURE BUTTON */
 
 .captureBtn{
-position:fixed;
-bottom:30px;
-left:50%;
-transform:translateX(-50%);
-padding:14px 40px;
-border-radius:40px;
-background:#00bcd4;
-color:white;
-border:none;
-font-weight:bold;
-cursor:pointer;
-z-index:9999;
+    position:fixed;
+    bottom:30px;
+    left:50%;
+    transform:translateX(-50%);
+    border:none;
+    background:#00bcd4;
+    color:white;
+    padding:14px 35px;
+    border-radius:50px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+    z-index:1000;
 }
 
-/* POPUP PREVIEW */
+/* POPUP */
 
 #previewPopup{
-display:none;
-position:fixed;
-top:0;
-left:0;
-width:100vw;
-height:100vh;
-background:rgba(0,0,0,.85);
-align-items:center;
-justify-content:center;
-flex-direction:column;
-z-index:99999;
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.9);
+    z-index:99999;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
 }
 
 #previewPopup img{
-max-width:90%;
-max-height:80%;
-border-radius:12px;
+    max-width:90%;
+    max-height:80%;
+    border-radius:12px;
 }
 
 #closePreview{
-position:absolute;
-top:20px;
-right:30px;
-color:white;
-font-size:30px;
-cursor:pointer;
+    position:absolute;
+    top:20px;
+    right:30px;
+    color:white;
+    font-size:35px;
+    cursor:pointer;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<video id="cam" autoplay playsinline muted></video>
+<video
+id="cam"
+autoplay
+playsinline
+muted>
+</video>
 
 <div class="arImage" id="plate">
-<img src="{{ project.file_url }}">
+    <img src="{{ project.file_url }}">
 </div>
 
-<button id="captureBtn" class="captureBtn">
+<button
+id="captureBtn"
+class="captureBtn">
 📸 Capture
 </button>
 
 <div id="previewPopup">
 
-<span id="closePreview">✕</span>
+    <span id="closePreview">✕</span>
 
-<img id="previewImage">
+    <img id="previewImage">
 
 </div>
 
-
 <script>
 
-/* CAMERA START */
+/* CAMERA */
 
-const cam=document.getElementById("cam");
+const cam = document.getElementById("cam");
 
 navigator.mediaDevices.getUserMedia({
-video:{facingMode:"environment"}
-}).then(stream=>{
-cam.srcObject=stream;
+    video:{
+        facingMode:"environment"
+    }
+})
+.then(stream=>{
+    cam.srcObject = stream;
+})
+.catch(err=>{
+    console.log(err);
 });
 
 
-/* TRANSFORM VARIABLES */
+/* AR IMAGE */
 
-let plate=document.getElementById("plate");
+const plate = document.getElementById("plate");
 
-let x=0,y=0,scale=1,rotation=0;
+let x = 0;
+let y = 0;
 
-let startX,startY,startDist,startAngle;
+let scale = 1;
+let rotation = 0;
+
+let startX;
+let startY;
+
+let startDist;
+let startAngle;
 
 
-/* UPDATE POSITION */
+/* UPDATE */
 
 function update(){
 
-plate.style.transform=`
-translate(calc(-50% + ${x}px),
-calc(-50% + ${y}px))
-scale(${scale})
-rotate(${rotation}deg)
-`;
-
+    plate.style.transform = `
+        translate(-50%,-50%)
+        translate(${x}px,${y}px)
+        scale(${scale})
+        rotate(${rotation}deg)
+    `;
 }
 
-
-/* DRAG */
-
-plate.onmousedown=e=>{
-
-startX=e.clientX-x;
-startY=e.clientY-y;
-
-document.onmousemove=e=>{
-
-x=e.clientX-startX;
-y=e.clientY-startY;
-
 update();
 
+
+/* MOUSE DRAG */
+
+plate.onmousedown = e=>{
+
+    startX = e.clientX - x;
+    startY = e.clientY - y;
+
+    document.onmousemove = e=>{
+
+        x = e.clientX - startX;
+        y = e.clientY - startY;
+
+        update();
+    };
+
+    document.onmouseup = ()=>{
+
+        document.onmousemove = null;
+    };
 };
 
-document.onmouseup=()=>document.onmousemove=null;
 
-};
+/* MOUSE WHEEL ZOOM */
 
+plate.onwheel = e=>{
 
-/* ZOOM */
+    e.preventDefault();
 
-plate.onwheel=e=>{
+    scale += e.deltaY * -0.001;
 
-e.preventDefault();
+    scale = Math.max(
+        0.3,
+        Math.min(scale,4)
+    );
 
-scale+=e.deltaY*-0.001;
-
-scale=Math.max(.3,Math.min(scale,4));
-
-update();
-
+    update();
 };
 
 
 /* TOUCH START */
 
-plate.addEventListener("touchstart",e=>{
+plate.addEventListener(
+"touchstart",
+e=>{
 
-if(e.touches.length==1){
+    if(e.touches.length===1){
 
-startX=e.touches[0].clientX-x;
-startY=e.touches[0].clientY-y;
+        startX =
+        e.touches[0].clientX - x;
 
-}
+        startY =
+        e.touches[0].clientY - y;
+    }
 
-if(e.touches.length==2){
+    if(e.touches.length===2){
 
-startDist=getDistance(e);
-startAngle=getAngle(e);
+        startDist =
+        getDistance(e);
 
-}
+        startAngle =
+        getAngle(e);
+    }
 
-});
+},
+{passive:false}
+);
 
 
 /* TOUCH MOVE */
 
-plate.addEventListener("touchmove",e=>{
+plate.addEventListener(
+"touchmove",
+e=>{
 
-e.preventDefault();
+    e.preventDefault();
 
-if(e.touches.length==1){
+    if(e.touches.length===1){
 
-x=e.touches[0].clientX-startX;
-y=e.touches[0].clientY-startY;
+        x =
+        e.touches[0].clientX -
+        startX;
 
-}
+        y =
+        e.touches[0].clientY -
+        startY;
+    }
 
-if(e.touches.length==2){
+    if(e.touches.length===2){
 
-let newDist=getDistance(e);
+        let newDist =
+        getDistance(e);
 
-scale*=newDist/startDist;
+        scale *=
+        newDist/startDist;
 
-startDist=newDist;
+        startDist =
+        newDist;
 
-let newAngle=getAngle(e);
+        scale =
+        Math.max(
+            0.3,
+            Math.min(scale,4)
+        );
 
-rotation+=newAngle-startAngle;
+        let newAngle =
+        getAngle(e);
 
-startAngle=newAngle;
+        rotation +=
+        newAngle-startAngle;
 
-}
+        startAngle =
+        newAngle;
+    }
 
-update();
+    update();
 
-});
+},
+{passive:false}
+);
 
+
+/* HELPERS */
 
 function getDistance(e){
 
-let dx=e.touches[0].clientX-e.touches[1].clientX;
-let dy=e.touches[0].clientY-e.touches[1].clientY;
+    let dx =
+    e.touches[0].clientX -
+    e.touches[1].clientX;
 
-return Math.sqrt(dx*dx+dy*dy);
+    let dy =
+    e.touches[0].clientY -
+    e.touches[1].clientY;
 
+    return Math.sqrt(
+        dx*dx + dy*dy
+    );
 }
 
 
 function getAngle(e){
 
-let dx=e.touches[1].clientX-e.touches[0].clientX;
-let dy=e.touches[1].clientY-e.touches[0].clientY;
+    let dx =
+    e.touches[1].clientX -
+    e.touches[0].clientX;
 
-return Math.atan2(dy,dx)*180/Math.PI;
+    let dy =
+    e.touches[1].clientY -
+    e.touches[0].clientY;
 
+    return Math.atan2(
+        dy,
+        dx
+    ) * 180 / Math.PI;
 }
 
 
 /* CAPTURE */
 
-document.getElementById("captureBtn").onclick=function(){
+document
+.getElementById("captureBtn")
+.onclick = ()=>{
 
-let btn=document.getElementById("captureBtn");
+    const canvas =
+    document.createElement("canvas");
 
-btn.style.display="none";
+    const ctx =
+    canvas.getContext("2d");
 
-html2canvas(document.body,{
-useCORS:true,
-allowTaint:true,
-scale:2
-}).then(canvas=>{
+    canvas.width =
+    window.innerWidth;
 
-btn.style.display="block";
+    canvas.height =
+    window.innerHeight;
 
-let imageURL=canvas.toDataURL("image/png");
 
-/* SHOW POPUP */
+    /* CAMERA */
 
-document.getElementById("previewImage").src=imageURL;
+    ctx.drawImage(
+        cam,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
 
-document.getElementById("previewPopup").style.display="flex";
 
-/* DOWNLOAD IMAGE */
+    /* AR IMAGE */
 
-let link=document.createElement("a");
+    const img =
+    plate.querySelector("img");
 
-link.download="AR_capture.png";
+    const rect =
+    plate.getBoundingClientRect();
 
-link.href=imageURL;
+    ctx.save();
 
-link.click();
+    ctx.translate(
+        rect.left + rect.width/2,
+        rect.top + rect.height/2
+    );
 
-});
+    ctx.rotate(
+        rotation *
+        Math.PI / 180
+    );
 
+    ctx.scale(
+        scale,
+        scale
+    );
+
+    ctx.drawImage(
+        img,
+        -rect.width/2,
+        -rect.height/2,
+        rect.width,
+        rect.height
+    );
+
+    ctx.restore();
+
+
+    const imageURL =
+    canvas.toDataURL(
+        "image/png"
+    );
+
+
+    /* PREVIEW */
+
+    document
+    .getElementById(
+        "previewImage"
+    ).src = imageURL;
+
+    document
+    .getElementById(
+        "previewPopup"
+    ).style.display = "flex";
+
+
+    /* DOWNLOAD */
+
+    const link =
+    document.createElement("a");
+
+    link.href =
+    imageURL;
+
+    link.download =
+    "AR_capture.png";
+
+    link.click();
 };
 
 
-document.getElementById("closePreview").onclick=function(){
+/* CLOSE POPUP */
 
-document.getElementById("previewPopup").style.display="none";
+document
+.getElementById("closePreview")
+.onclick = ()=>{
 
+    document
+    .getElementById(
+        "previewPopup"
+    ).style.display = "none";
 };
 
 </script>
