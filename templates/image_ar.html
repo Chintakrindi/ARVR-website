@@ -1,41 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>AR Viewer</title>
+<title>Image AR Viewer</title>
 
 <style>
 
 body{
     margin:0;
     overflow:hidden;
-    background:black;
-    font-family:Segoe UI, sans-serif;
+    background:#000;
+    font-family:Arial, sans-serif;
 }
 
-/* CAMERA */
+/* Camera */
 
 video{
     position:fixed;
-    inset:0;
-    width:100%;
-    height:100%;
+    top:0;
+    left:0;
+    width:100vw;
+    height:100vh;
     object-fit:cover;
     z-index:1;
 }
 
-/* AR IMAGE */
+/* AR Image */
 
 .arImage{
     position:fixed;
     top:50%;
     left:50%;
-    width:320px;
-    cursor:grab;
+    width:300px;
     touch-action:none;
+    cursor:grab;
     z-index:10;
 }
 
@@ -43,38 +43,38 @@ video{
     width:100%;
     display:block;
     border-radius:20px;
-    box-shadow:0 20px 80px rgba(0,0,0,.6);
+    box-shadow:0 10px 40px rgba(0,0,0,.5);
 }
 
-/* CAPTURE BUTTON */
+/* Capture Button */
 
 .captureBtn{
     position:fixed;
-    bottom:30px;
+    bottom:25px;
     left:50%;
     transform:translateX(-50%);
+    padding:15px 35px;
     border:none;
-    background:#00bcd4;
-    color:white;
-    padding:14px 35px;
     border-radius:50px;
+    background:#00BCD4;
+    color:#fff;
     font-size:16px;
     font-weight:bold;
     cursor:pointer;
-    z-index:1000;
+    z-index:999;
 }
 
-/* POPUP */
+/* Preview Popup */
 
 #previewPopup{
     display:none;
     position:fixed;
     inset:0;
     background:rgba(0,0,0,.9);
-    z-index:99999;
     justify-content:center;
     align-items:center;
     flex-direction:column;
+    z-index:99999;
 }
 
 #previewPopup img{
@@ -93,34 +93,23 @@ video{
 }
 
 </style>
-
 </head>
 
 <body>
 
-<video
-id="cam"
-autoplay
-playsinline
-muted>
-</video>
+<video id="cam" autoplay playsinline muted></video>
 
 <div class="arImage" id="plate">
-    <img src="{{ project.file_url }}">
+    <img src="{{ project.file_url }}" alt="AR Image">
 </div>
 
-<button
-id="captureBtn"
-class="captureBtn">
+<button id="captureBtn" class="captureBtn">
 📸 Capture
 </button>
 
 <div id="previewPopup">
-
     <span id="closePreview">✕</span>
-
     <img id="previewImage">
-
 </div>
 
 <script>
@@ -138,6 +127,7 @@ navigator.mediaDevices.getUserMedia({
     cam.srcObject = stream;
 })
 .catch(err=>{
+    alert("Camera access denied.");
     console.log(err);
 });
 
@@ -148,18 +138,13 @@ const plate = document.getElementById("plate");
 
 let x = 0;
 let y = 0;
-
 let scale = 1;
 let rotation = 0;
 
 let startX;
 let startY;
-
 let startDist;
 let startAngle;
-
-
-/* UPDATE */
 
 function update(){
 
@@ -174,7 +159,7 @@ function update(){
 update();
 
 
-/* MOUSE DRAG */
+/* Mouse Drag */
 
 plate.onmousedown = e=>{
 
@@ -196,7 +181,7 @@ plate.onmousedown = e=>{
 };
 
 
-/* MOUSE WHEEL ZOOM */
+/* Mouse Wheel Zoom */
 
 plate.onwheel = e=>{
 
@@ -204,169 +189,109 @@ plate.onwheel = e=>{
 
     scale += e.deltaY * -0.001;
 
-    scale = Math.max(
-        0.3,
-        Math.min(scale,4)
-    );
+    scale = Math.max(0.3, Math.min(scale,4));
 
     update();
 };
 
 
-/* TOUCH START */
+/* Touch Start */
 
-plate.addEventListener(
-"touchstart",
-e=>{
+plate.addEventListener("touchstart",e=>{
 
     if(e.touches.length===1){
 
-        startX =
-        e.touches[0].clientX - x;
-
-        startY =
-        e.touches[0].clientY - y;
+        startX = e.touches[0].clientX - x;
+        startY = e.touches[0].clientY - y;
     }
 
     if(e.touches.length===2){
 
-        startDist =
-        getDistance(e);
-
-        startAngle =
-        getAngle(e);
+        startDist = getDistance(e);
+        startAngle = getAngle(e);
     }
 
-},
-{passive:false}
-);
+},{passive:false});
 
 
-/* TOUCH MOVE */
+/* Touch Move */
 
-plate.addEventListener(
-"touchmove",
-e=>{
+plate.addEventListener("touchmove",e=>{
 
     e.preventDefault();
 
     if(e.touches.length===1){
 
-        x =
-        e.touches[0].clientX -
-        startX;
-
-        y =
-        e.touches[0].clientY -
-        startY;
+        x = e.touches[0].clientX - startX;
+        y = e.touches[0].clientY - startY;
     }
 
     if(e.touches.length===2){
 
-        let newDist =
-        getDistance(e);
+        let newDist = getDistance(e);
 
-        scale *=
-        newDist/startDist;
+        scale *= newDist/startDist;
+        startDist = newDist;
 
-        startDist =
-        newDist;
+        scale = Math.max(0.3, Math.min(scale,4));
 
-        scale =
-        Math.max(
-            0.3,
-            Math.min(scale,4)
-        );
+        let newAngle = getAngle(e);
 
-        let newAngle =
-        getAngle(e);
+        rotation += (newAngle - startAngle);
 
-        rotation +=
-        newAngle-startAngle;
-
-        startAngle =
-        newAngle;
+        startAngle = newAngle;
     }
 
     update();
 
-},
-{passive:false}
-);
+},{passive:false});
 
-
-/* HELPERS */
 
 function getDistance(e){
 
-    let dx =
-    e.touches[0].clientX -
-    e.touches[1].clientX;
+    let dx = e.touches[0].clientX - e.touches[1].clientX;
+    let dy = e.touches[0].clientY - e.touches[1].clientY;
 
-    let dy =
-    e.touches[0].clientY -
-    e.touches[1].clientY;
-
-    return Math.sqrt(
-        dx*dx + dy*dy
-    );
+    return Math.sqrt(dx*dx + dy*dy);
 }
-
 
 function getAngle(e){
 
-    let dx =
-    e.touches[1].clientX -
-    e.touches[0].clientX;
+    let dx = e.touches[1].clientX - e.touches[0].clientX;
+    let dy = e.touches[1].clientY - e.touches[0].clientY;
 
-    let dy =
-    e.touches[1].clientY -
-    e.touches[0].clientY;
-
-    return Math.atan2(
-        dy,
-        dx
-    ) * 180 / Math.PI;
+    return Math.atan2(dy,dx) * 180 / Math.PI;
 }
 
 
 /* CAPTURE */
 
-document
-.getElementById("captureBtn")
-.onclick = ()=>{
+document.getElementById("captureBtn").onclick = ()=>{
 
-    const canvas =
-    document.createElement("canvas");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
-    const ctx =
-    canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    canvas.width =
-    window.innerWidth;
+    try{
 
-    canvas.height =
-    window.innerHeight;
+        ctx.drawImage(
+            cam,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
 
+    }catch(err){
 
-    /* CAMERA */
+        console.log(err);
+    }
 
-    ctx.drawImage(
-        cam,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
+    const img = plate.querySelector("img");
 
-
-    /* AR IMAGE */
-
-    const img =
-    plate.querySelector("img");
-
-    const rect =
-    plate.getBoundingClientRect();
+    const rect = plate.getBoundingClientRect();
 
     ctx.save();
 
@@ -375,15 +300,7 @@ document
         rect.top + rect.height/2
     );
 
-    ctx.rotate(
-        rotation *
-        Math.PI / 180
-    );
-
-    ctx.scale(
-        scale,
-        scale
-    );
+    ctx.rotate(rotation * Math.PI/180);
 
     ctx.drawImage(
         img,
@@ -395,51 +312,25 @@ document
 
     ctx.restore();
 
+    const imageURL = canvas.toDataURL("image/png");
 
-    const imageURL =
-    canvas.toDataURL(
-        "image/png"
-    );
+    document.getElementById("previewImage").src = imageURL;
+    document.getElementById("previewPopup").style.display = "flex";
 
+    const link = document.createElement("a");
 
-    /* PREVIEW */
-
-    document
-    .getElementById(
-        "previewImage"
-    ).src = imageURL;
-
-    document
-    .getElementById(
-        "previewPopup"
-    ).style.display = "flex";
-
-
-    /* DOWNLOAD */
-
-    const link =
-    document.createElement("a");
-
-    link.href =
-    imageURL;
-
-    link.download =
-    "AR_capture.png";
+    link.href = imageURL;
+    link.download = "AR_Capture.png";
 
     link.click();
 };
 
 
-/* CLOSE POPUP */
+/* Close Preview */
 
-document
-.getElementById("closePreview")
-.onclick = ()=>{
+document.getElementById("closePreview").onclick = ()=>{
 
-    document
-    .getElementById(
-        "previewPopup"
-    ).style.display = "none";
+    document.getElementById("previewPopup").style.display = "none";
 };
 
 </script>
