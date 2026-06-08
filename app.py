@@ -1,18 +1,26 @@
 import os
 import uuid
+
 from flask import Flask, render_template, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from dotenv import load_dotenv
+
 import cloudinary
 import cloudinary.uploader
 
+# ===============================
 # LOAD ENV VARIABLES
+# ===============================
+
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret")
 
+# ===============================
 # DATABASE CONFIG
+# ===============================
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
@@ -21,22 +29,29 @@ if DATABASE_URL:
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace(
             "postgres://",
-            "postgresql://"
+            "postgresql://",
+            1
         )
-
-    if "sslmode=" not in DATABASE_URL:
-        DATABASE_URL += "?sslmode=require"
 
 else:
     DATABASE_URL = "sqlite:///local.db"
 
-
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+    "connect_args": {
+        "sslmode": "require"
+    }
+}
+
 db = SQLAlchemy(app)
 
+# ===============================
 # CLOUDINARY CONFIG
+# ===============================
 
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
@@ -47,8 +62,9 @@ cloudinary.config(
 
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "1234")
 
+# ===============================
 # DATABASE MODEL
-
+# ===============================
 
 class Project(db.Model):
 
@@ -63,9 +79,21 @@ class Project(db.Model):
     type = db.Column(db.String(50))
 
 
-with app.app_context():
-    db.create_all()
+# ===============================
+# DATABASE INIT
+# ===============================
 
+with app.app_context():
+
+    try:
+        db.session.execute(text("SELECT 1"))
+        print("DATABASE CONNECTED")
+
+        db.create_all()
+        print("TABLES CREATED")
+
+    except Exception as e:
+        print("DATABASE ERROR:", e)
 
 # ===============================
 # DASHBOARD
@@ -76,8 +104,10 @@ def dashboard():
 
     projects = Project.query.order_by(Project.id.desc()).all()
 
-    return render_template("dashboard.html", projects=projects)
-
+    return render_template(
+        "dashboard.html",
+        projects=projects
+    )
 
 # ===============================
 # CREATE PROJECT PAGE
@@ -95,7 +125,6 @@ def create_project():
 
     return render_template("create_project.html")
 
-
 # ===============================
 # VERIFY PIN
 # ===============================
@@ -104,7 +133,6 @@ def create_project():
 def verify_pin():
 
     pin = request.form.get("pin")
-
     next_page = request.form.get("next_page")
 
     if pin == ADMIN_PIN:
@@ -118,7 +146,6 @@ def verify_pin():
         error="Wrong PIN",
         next_page=next_page
     )
-
 
 # ===============================
 # IMAGE AR VIEW
@@ -134,7 +161,6 @@ def image_ar(project_id):
         project=project
     )
 
-
 # ===============================
 # MODEL AR VIEW
 # ===============================
@@ -148,7 +174,6 @@ def model_ar(project_id):
         "model_ar.html",
         project=project
     )
-
 
 # ===============================
 # SAVE PROJECT
@@ -182,11 +207,9 @@ def save():
     )
 
     db.session.add(project)
-
     db.session.commit()
 
     return redirect("/")
-
 
 # ===============================
 # DELETE PROJECT
@@ -197,14 +220,18 @@ def delete_project(id):
 
     project = Project.query.get_or_404(id)
 
-    cloudinary.uploader.destroy(project.public_id)
+    try:
+        cloudinary.uploader.destroy(
+            project.public_id,
+            resource_type="image"
+        )
+    except:
+        pass
 
     db.session.delete(project)
-
     db.session.commit()
 
     return redirect("/")
-
 
 # ===============================
 # LOGOUT
@@ -217,7 +244,6 @@ def logout():
 
     return redirect("/")
 
-
 # ===============================
 # WALL AR PAGE
 # ===============================
@@ -227,10 +253,28 @@ def wall_ar():
 
     return render_template("wall_ar.html")
 
+# ===============================
+# HEALTH CHECK
+# ===============================
+
+@app.route("/health")
+def health():
+
+    try:
+        db.session.execute(text("SELECT 1"))
+        return "Database Connected"
+
+    except Exception as e:
+        return f"Database Error: {str(e)}", 500
 
 # ===============================
 # RUN SERVER
 # ===============================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
