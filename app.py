@@ -36,47 +36,16 @@ if DATABASE_URL:
 else:
     DATABASE_URL = "sqlite:///local.db"
 
+print("DATABASE_URL =", DATABASE_URL)
+
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-    "pool_recycle": 300,
-    "connect_args": {
-        "sslmode": "require"
-    }
+    "pool_pre_ping": True
 }
 
 db = SQLAlchemy(app)
-
-# ===============================
-# CLOUDINARY CONFIG
-# ===============================
-
-cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
-    secure=True
-)
-
-ADMIN_PIN = os.environ.get("ADMIN_PIN", "1234")
-
-# ===============================
-# DATABASE MODEL
-# ===============================
-
-class Project(db.Model):
-
-    id = db.Column(db.Integer, primary_key=True)
-
-    name = db.Column(db.String(120))
-
-    file_url = db.Column(db.String(500))
-
-    public_id = db.Column(db.String(300))
-
-    type = db.Column(db.String(50))
 
 
 # ===============================
@@ -86,14 +55,18 @@ class Project(db.Model):
 with app.app_context():
 
     try:
+
         db.session.execute(text("SELECT 1"))
+
         print("DATABASE CONNECTED")
 
         db.create_all()
+
         print("TABLES CREATED")
 
     except Exception as e:
-        print("DATABASE ERROR:", e)
+
+        print("DATABASE ERROR:", str(e))
 
 # ===============================
 # DASHBOARD
@@ -102,7 +75,18 @@ with app.app_context():
 @app.route("/")
 def dashboard():
 
-    projects = Project.query.order_by(Project.id.desc()).all()
+    try:
+
+        projects = Project.query.order_by(
+            Project.id.desc()
+        ).all()
+
+    except Exception as e:
+
+        return f"""
+        <h2>Database Error</h2>
+        <pre>{str(e)}</pre>
+        """
 
     return render_template(
         "dashboard.html",
