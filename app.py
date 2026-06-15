@@ -16,9 +16,9 @@ from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 
-# ======================================
+# ==================================
 # LOAD ENV VARIABLES
-# ======================================
+# ==================================
 
 load_dotenv()
 
@@ -34,19 +34,23 @@ ADMIN_PIN = os.getenv(
     "1234"
 )
 
-# ======================================
-# MYSQL DATABASE (XAMPP)
-# ======================================
+# ==================================
+# DATABASE CONFIG
+# ==================================
 
-MYSQL_USER = os.getenv("MYSQL_USER", "root")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
-MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
-MYSQL_DB = os.getenv("MYSQL_DB", "arvr5")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-DATABASE_URL = (
-    f"mysql+pymysql://{MYSQL_USER}:"
-    f"{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}"
-)
+if DATABASE_URL:
+
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace(
+            "postgres://",
+            "postgresql://",
+            1
+        )
+
+else:
+    DATABASE_URL = "sqlite:///local.db"
 
 print("DATABASE_URL =", DATABASE_URL)
 
@@ -59,9 +63,9 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 
 db = SQLAlchemy(app)
 
-# ======================================
+# ==================================
 # CLOUDINARY CONFIG
-# ======================================
+# ==================================
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -70,9 +74,9 @@ cloudinary.config(
     secure=True
 )
 
-# ======================================
+# ==================================
 # DATABASE MODEL
-# ======================================
+# ==================================
 
 class Project(db.Model):
 
@@ -103,9 +107,9 @@ class Project(db.Model):
         nullable=False
     )
 
-# ======================================
+# ==================================
 # DATABASE INIT
-# ======================================
+# ==================================
 
 with app.app_context():
 
@@ -123,9 +127,9 @@ with app.app_context():
 
         print("DATABASE ERROR:", str(e))
 
-# ======================================
+# ==================================
 # DASHBOARD
-# ======================================
+# ==================================
 
 @app.route("/")
 def dashboard():
@@ -148,9 +152,9 @@ def dashboard():
         <pre>{str(e)}</pre>
         """
 
-# ======================================
+# ==================================
 # CREATE PROJECT PAGE
-# ======================================
+# ==================================
 
 @app.route("/create")
 def create_project():
@@ -166,9 +170,9 @@ def create_project():
         "create_project.html"
     )
 
-# ======================================
+# ==================================
 # VERIFY PIN
-# ======================================
+# ==================================
 
 @app.route("/verify-pin", methods=["POST"])
 def verify_pin():
@@ -191,9 +195,52 @@ def verify_pin():
         next_page=next_page
     )
 
-# ======================================
+# ==================================
+# IMAGE AR VIEW
+# ==================================
+
+@app.route("/image-ar/<int:project_id>")
+def image_ar(project_id):
+
+    project = Project.query.get_or_404(
+        project_id
+    )
+
+    return render_template(
+        "image_ar.html",
+        project=project
+    )
+
+# ==================================
+# MODEL AR VIEW
+# ==================================
+
+@app.route("/model-ar/<int:project_id>")
+def model_ar(project_id):
+
+    project = Project.query.get_or_404(
+        project_id
+    )
+
+    return render_template(
+        "model_ar.html",
+        project=project
+    )
+
+# ==================================
+# WALL AR PAGE
+# ==================================
+
+@app.route("/wall-ar")
+def wall_ar():
+
+    return render_template(
+        "wall_ar.html"
+    )
+
+# ==================================
 # SAVE PROJECT
-# ======================================
+# ==================================
 
 @app.route("/save", methods=["POST"])
 def save():
@@ -237,52 +284,9 @@ def save():
 
         return f"Upload Error: {str(e)}", 500
 
-# ======================================
-# IMAGE AR
-# ======================================
-
-@app.route("/image-ar/<int:project_id>")
-def image_ar(project_id):
-
-    project = Project.query.get_or_404(
-        project_id
-    )
-
-    return render_template(
-        "image_ar.html",
-        project=project
-    )
-
-# ======================================
-# MODEL AR
-# ======================================
-
-@app.route("/model-ar/<int:project_id>")
-def model_ar(project_id):
-
-    project = Project.query.get_or_404(
-        project_id
-    )
-
-    return render_template(
-        "model_ar.html",
-        project=project
-    )
-
-# ======================================
-# WALL AR
-# ======================================
-
-@app.route("/wall-ar")
-def wall_ar():
-
-    return render_template(
-        "wall_ar.html"
-    )
-
-# ======================================
+# ==================================
 # DELETE PROJECT
-# ======================================
+# ==================================
 
 @app.route("/delete/<int:id>")
 def delete_project(id):
@@ -293,20 +297,21 @@ def delete_project(id):
 
         cloudinary.uploader.destroy(
             project.public_id,
-            resource_type="image"
+            resource_type="raw"
         )
 
-    except Exception:
-        pass
+    except Exception as e:
+
+        print("Cloudinary Delete Error:", e)
 
     db.session.delete(project)
     db.session.commit()
 
     return redirect("/")
 
-# ======================================
+# ==================================
 # LOGOUT
-# ======================================
+# ==================================
 
 @app.route("/logout")
 def logout():
@@ -315,9 +320,9 @@ def logout():
 
     return redirect("/")
 
-# ======================================
+# ==================================
 # HEALTH CHECK
-# ======================================
+# ==================================
 
 @app.route("/health")
 def health():
@@ -337,14 +342,14 @@ def health():
             500
         )
 
-# ======================================
+# ==================================
 # RUN SERVER
-# ======================================
+# ==================================
 
 if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=5000,
+        port=int(os.getenv("PORT", 5000)),
         debug=True
     )
