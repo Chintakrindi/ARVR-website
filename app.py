@@ -1,7 +1,14 @@
 import os
 import uuid
 
-from flask import Flask, render_template, request, redirect, session
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    session
+)
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from dotenv import load_dotenv
@@ -9,32 +16,37 @@ from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 
-# ===============================
+# ======================================
 # LOAD ENV VARIABLES
-# ===============================
+# ======================================
 
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret")
 
-# ===============================
-# DATABASE CONFIG
-# ===============================
+app.secret_key = os.getenv(
+    "SECRET_KEY",
+    "change-this-secret"
+)
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+ADMIN_PIN = os.getenv(
+    "ADMIN_PIN",
+    "1234"
+)
 
-if DATABASE_URL:
+# ======================================
+# MYSQL DATABASE (XAMPP)
+# ======================================
 
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace(
-            "postgres://",
-            "postgresql://",
-            1
-        )
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_DB = os.getenv("MYSQL_DB", "arvr5")
 
-else:
-    DATABASE_URL = "sqlite:///local.db"
+DATABASE_URL = (
+    f"mysql+pymysql://{MYSQL_USER}:"
+    f"{MYSQL_PASSWORD}@{MYSQL_HOST}/{MYSQL_DB}"
+)
 
 print("DATABASE_URL =", DATABASE_URL)
 
@@ -47,10 +59,53 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 
 db = SQLAlchemy(app)
 
+# ======================================
+# CLOUDINARY CONFIG
+# ======================================
 
-# ===============================
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
+# ======================================
+# DATABASE MODEL
+# ======================================
+
+class Project(db.Model):
+
+    __tablename__ = "projects"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    name = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    file_url = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    public_id = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    type = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+# ======================================
 # DATABASE INIT
-# ===============================
+# ======================================
 
 with app.app_context():
 
@@ -68,9 +123,9 @@ with app.app_context():
 
         print("DATABASE ERROR:", str(e))
 
-# ===============================
+# ======================================
 # DASHBOARD
-# ===============================
+# ======================================
 
 @app.route("/")
 def dashboard():
@@ -81,6 +136,11 @@ def dashboard():
             Project.id.desc()
         ).all()
 
+        return render_template(
+            "dashboard.html",
+            projects=projects
+        )
+
     except Exception as e:
 
         return f"""
@@ -88,14 +148,9 @@ def dashboard():
         <pre>{str(e)}</pre>
         """
 
-    return render_template(
-        "dashboard.html",
-        projects=projects
-    )
-
-# ===============================
+# ======================================
 # CREATE PROJECT PAGE
-# ===============================
+# ======================================
 
 @app.route("/create")
 def create_project():
@@ -107,17 +162,22 @@ def create_project():
             next_page="/create"
         )
 
-    return render_template("create_project.html")
+    return render_template(
+        "create_project.html"
+    )
 
-# ===============================
+# ======================================
 # VERIFY PIN
-# ===============================
+# ======================================
 
 @app.route("/verify-pin", methods=["POST"])
 def verify_pin():
 
     pin = request.form.get("pin")
-    next_page = request.form.get("next_page")
+    next_page = request.form.get(
+        "next_page",
+        "/create"
+    )
 
     if pin == ADMIN_PIN:
 
@@ -131,73 +191,98 @@ def verify_pin():
         next_page=next_page
     )
 
-# ===============================
-# IMAGE AR VIEW
-# ===============================
+# ======================================
+# SAVE PROJECT
+# ======================================
+
+@app.route("/save", methods=["POST"])
+def save():
+
+    try:
+
+        file = request.files.get("file")
+        name = request.form.get("name")
+        ptype = request.form.get("type")
+
+        if not file:
+            return "No file selected", 400
+
+        if not name:
+            return "Project name required", 400
+
+        if not ptype:
+            return "Project type required", 400
+
+        public_id = str(uuid.uuid4())
+
+        upload_result = cloudinary.uploader.upload(
+            file,
+            public_id=public_id,
+            resource_type="auto"
+        )
+
+        project = Project(
+            name=name,
+            file_url=upload_result["secure_url"],
+            public_id=public_id,
+            type=ptype
+        )
+
+        db.session.add(project)
+        db.session.commit()
+
+        return redirect("/")
+
+    except Exception as e:
+
+        return f"Upload Error: {str(e)}", 500
+
+# ======================================
+# IMAGE AR
+# ======================================
 
 @app.route("/image-ar/<int:project_id>")
 def image_ar(project_id):
 
-    project = Project.query.get_or_404(project_id)
+    project = Project.query.get_or_404(
+        project_id
+    )
 
     return render_template(
         "image_ar.html",
         project=project
     )
 
-# ===============================
-# MODEL AR VIEW
-# ===============================
+# ======================================
+# MODEL AR
+# ======================================
 
 @app.route("/model-ar/<int:project_id>")
 def model_ar(project_id):
 
-    project = Project.query.get_or_404(project_id)
+    project = Project.query.get_or_404(
+        project_id
+    )
 
     return render_template(
         "model_ar.html",
         project=project
     )
 
-# ===============================
-# SAVE PROJECT
-# ===============================
+# ======================================
+# WALL AR
+# ======================================
 
-@app.route("/save", methods=["POST"])
-def save():
+@app.route("/wall-ar")
+def wall_ar():
 
-    file = request.files.get("file")
-
-    name = request.form.get("name")
-
-    ptype = request.form.get("type")
-
-    if not file:
-        return "No file selected", 400
-
-    public_id = str(uuid.uuid4())
-
-    upload = cloudinary.uploader.upload(
-        file,
-        public_id=public_id,
-        resource_type="auto"
+    return render_template(
+        "wall_ar.html"
     )
 
-    project = Project(
-        name=name,
-        file_url=upload["secure_url"],
-        public_id=public_id,
-        type=ptype
-    )
-
-    db.session.add(project)
-    db.session.commit()
-
-    return redirect("/")
-
-# ===============================
+# ======================================
 # DELETE PROJECT
-# ===============================
+# ======================================
 
 @app.route("/delete/<int:id>")
 def delete_project(id):
@@ -205,11 +290,13 @@ def delete_project(id):
     project = Project.query.get_or_404(id)
 
     try:
+
         cloudinary.uploader.destroy(
             project.public_id,
             resource_type="image"
         )
-    except:
+
+    except Exception:
         pass
 
     db.session.delete(project)
@@ -217,9 +304,9 @@ def delete_project(id):
 
     return redirect("/")
 
-# ===============================
+# ======================================
 # LOGOUT
-# ===============================
+# ======================================
 
 @app.route("/logout")
 def logout():
@@ -228,32 +315,31 @@ def logout():
 
     return redirect("/")
 
-# ===============================
-# WALL AR PAGE
-# ===============================
-
-@app.route("/wall-ar")
-def wall_ar():
-
-    return render_template("wall_ar.html")
-
-# ===============================
+# ======================================
 # HEALTH CHECK
-# ===============================
+# ======================================
 
 @app.route("/health")
 def health():
 
     try:
-        db.session.execute(text("SELECT 1"))
+
+        db.session.execute(
+            text("SELECT 1")
+        )
+
         return "Database Connected"
 
     except Exception as e:
-        return f"Database Error: {str(e)}", 500
 
-# ===============================
+        return (
+            f"Database Error: {str(e)}",
+            500
+        )
+
+# ======================================
 # RUN SERVER
-# ===============================
+# ======================================
 
 if __name__ == "__main__":
 
